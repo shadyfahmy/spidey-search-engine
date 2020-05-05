@@ -11,23 +11,23 @@ import org.jsoup.select.Elements;
 
 public class Crawler implements Runnable {
     private final int MAX_WEBSITES = 5000;
-    private final long startCrawlingTime;
+    private final long startCrawlingTime = System.currentTimeMillis();
     private static final int numThreads = 10;
     static final Object LOCK_LINKS_QUEUE = new Object();
     static final Object LOCK_VISITED_SET = new Object();
     public static Queue<String> linksQueue = new LinkedList<>();
     public static Set<String> VisitedLinks = new HashSet<>();
 
+    // public void run() {
+    // this.crawling();
+    // }
+
+    public Crawler() {
+    }
+
     public void run() {
-        crawling();
-    }
+        System.out.println("Thread (" + Thread.currentThread().getName() + "): starts running");
 
-    private Crawler() {
-        this.startCrawlingTime = System.currentTimeMillis();
-        this.crawling();
-    }
-
-    private void crawling() {
         while (true) {
             String crawledURL;
             // start lock
@@ -55,17 +55,19 @@ public class Crawler implements Runnable {
                     final Document urlContent = Jsoup.connect(url.toString()).get();
                     // Download to the disk
                     // System.out.println(urlContent.toString());
-                    System.out.println("1000");
                     String fileName = new String(crawledURL);
                     System.out.println(crawledURL);
                     fileName = fileName.replace(":", "-");
                     fileName = fileName.replace(".", "_");
                     fileName = fileName.replace("/", "|");
-                    System.out.println(fileName);
+                    System.out.println(
+                            "_________________________________________________________________________________________");
                     BufferedWriter writer = new BufferedWriter(new FileWriter("./Output/" + fileName + ".html"));
-                    System.out.println("1001");
                     writer.write(urlContent.toString());
-                    System.out.println("1002");
+                    System.out.println("Thread (" + Thread.currentThread().getName() + "): " + crawledURL
+                            + " is now added to output folder");
+                    System.out.println(
+                            "_________________________________________________________________________________________");
                     writer.close();
                     // start lock
                     synchronized (Crawler.LOCK_VISITED_SET) {
@@ -106,9 +108,10 @@ public class Crawler implements Runnable {
         List<Thread> threads = new ArrayList<>();
         while (Crawler.numThreads >= counter) {
             Thread t = new Thread(new Crawler());
-            t.setName(String.valueOf(counter));
+            t.setName(String.valueOf(counter++));
             threads.add(t);
-            counter++;
+            System.out.println("Thread " + t.getName() + " is created");
+            t.start();
         }
         for (final Thread t : threads) {
             try {
