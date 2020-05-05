@@ -28,7 +28,7 @@ public class Crawler implements Runnable {
     }
 
     private void crawling() {
-        while(true) {
+        while (true) {
             String crawledURL;
             // start lock
             synchronized (Crawler.LOCK_VISITED_SET) {
@@ -42,7 +42,7 @@ public class Crawler implements Runnable {
             // end lock
             // start lock
             synchronized (Crawler.LOCK_VISITED_SET) {
-                if(Crawler.VisitedLinks.contains(crawledURL)) {
+                if (Crawler.VisitedLinks.contains(crawledURL)) {
                     continue;
                 }
             }
@@ -50,12 +50,22 @@ public class Crawler implements Runnable {
             try {
                 final URL url = new URL(crawledURL);
                 try {
-                    System.out.println("Time: " + (System.currentTimeMillis() - this.startCrawlingTime) + ", crawling url : " + url);
+                    System.out.println("Time: " + (System.currentTimeMillis() - this.startCrawlingTime)
+                            + ", crawling url : " + url);
                     final Document urlContent = Jsoup.connect(url.toString()).get();
                     // Download to the disk
                     // System.out.println(urlContent.toString());
-                    BufferedWriter writer = new BufferedWriter(new FileWriter("./" + crawledURL + ".html"));
+                    System.out.println("1000");
+                    String fileName = new String(crawledURL);
+                    System.out.println(crawledURL);
+                    fileName = fileName.replace(":", "-");
+                    fileName = fileName.replace(".", "_");
+                    fileName = fileName.replace("/", "|");
+                    System.out.println(fileName);
+                    BufferedWriter writer = new BufferedWriter(new FileWriter("./Output/" + fileName + ".html"));
+                    System.out.println("1001");
                     writer.write(urlContent.toString());
+                    System.out.println("1002");
                     writer.close();
                     // start lock
                     synchronized (Crawler.LOCK_VISITED_SET) {
@@ -72,10 +82,12 @@ public class Crawler implements Runnable {
                         // end lock
                     }
                 } catch (IOException e) {
-                    System.out.println("                     ----------------- Error IO-Exception while crawling : " + crawledURL + " -----------------                     ");
+                    System.out.println("                     ----------------- Error IO-Exception while crawling : "
+                            + crawledURL + " -----------------                     ");
                 }
             } catch (MalformedURLException e) {
-                System.out.println("                     ----------------- Error Mal-Formed-URL while crawling : " + crawledURL + " -----------------                     ");
+                System.out.println("                     ----------------- Error Mal-Formed-URL while crawling : "
+                        + crawledURL + " -----------------                     ");
             }
 
         }
@@ -92,16 +104,18 @@ public class Crawler implements Runnable {
         }
         int counter = 1;
         List<Thread> threads = new ArrayList<>();
-        while(Crawler.numThreads >= counter) {
-            Thread t = new Thread (new Crawler()); t.setName(String.valueOf(counter));
+        while (Crawler.numThreads >= counter) {
+            Thread t = new Thread(new Crawler());
+            t.setName(String.valueOf(counter));
             threads.add(t);
             counter++;
         }
-        for(final Thread t :threads) {
+        for (final Thread t : threads) {
             try {
                 t.join();
             } catch (InterruptedException e) {
-                System.out.println("                     ----------------- Error Thread has been interupted -----------------                     ");
+                System.out.println(
+                        "                     ----------------- Error Thread has been interupted -----------------                     ");
             }
         }
     }

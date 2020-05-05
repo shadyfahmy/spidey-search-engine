@@ -1,0 +1,1 @@
+make && java -cp ".:./jsoup-1.13.1.jar" Crawler
