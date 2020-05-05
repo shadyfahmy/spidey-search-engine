@@ -1,53 +1,94 @@
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Collections;
+import java.util.*;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-public class Crawler {
-    private final Set<URL> links;
+public class Crawler implements Runnable {
+    private final int MAX_WEBSITES = 5000;
     private final long startCrawlingTime;
+    private static final int numThreads = 10;
+    public static Queue<String> linksQueue = new LinkedList<>();
+    public static Set<String> VisitedLinks = new HashSet<>();
 
-    private Crawler(final URL startURL) {
-        this.links = new HashSet<>();
-        this.startCrawlingTime = System.currentTimeMillis();
-        start_crawling(Collections.singleton(startURL));
+    public void run() {
+        crawling();
     }
 
-    private void start_crawling(final Set<URL> urls) {
-        urls.removeAll(this.links);
-        if (!urls.isEmpty()) {
-            final Set<URL> newURLS = new HashSet<>();
+    private Crawler() {
+        this.startCrawlingTime = System.currentTimeMillis();
+        this.crawling();
+    }
+
+    private void crawling() {
+        while(true) {
+            // start lock
+            if(VisitedLinks.size() > MAX_WEBSITES || Crawler.linksQueue.isEmpty()) {
+                // end lock
+                return;
+            }
+            String crawledURL = Crawler.linksQueue.poll();
+            // start lock
+            if(Crawler.VisitedLinks.contains(crawledURL)) {
+                // end lock
+                continue;
+            }
+            // end lock
             try {
-                this.links.addAll(urls);
-                for (final URL url : urls) {
-                    System.out
-                            .println((System.currentTimeMillis() - this.startCrawlingTime) + " crawling url : " + url);
+                final URL url = new URL(crawledURL);
+                try {
+                    System.out.println("Time: " + (System.currentTimeMillis() - this.startCrawlingTime) + ", crawling url : " + url);
                     final Document urlContent = Jsoup.connect(url.toString()).get();
+                    // Download to the disk
+
+                    // start lock
+                    Crawler.VisitedLinks.add(crawledURL);
+                    // end lock
                     final Elements linksFound = urlContent.select("a[href]");
                     for (final Element link : linksFound) {
                         final String urlText = link.attr("abs:href");
-                        if (urlText != "") {
-                            newURLS.add(new URL(urlText));
-                        }
+                        // start lock
+                        Crawler.linksQueue.add(urlText);
+                        // end lock
                     }
+                } catch (IOException e) {
+                    System.out.println("                     ----------------- Error IO-Exception while crawling : " + crawledURL + " -----------------                     ");
                 }
             } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println("                     ----------------- Error Mal-Formed-URL while crawling : " + crawledURL + " -----------------                     ");
             }
-            start_crawling(newURLS);
+
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        final Crawler crawler = new Crawler(new URL("https://www.gutenberg.org/"));
+    public static void main(String[] args) {
+        try {
+            File urlsFile = new File("./linksQueue.txt");
+            Scanner sc = new Scanner(urlsFile);
+            while (sc.hasNextLine())
+                Crawler.linksQueue.add(sc.nextLine());
+        } catch (FileNotFoundException e) {
+            Crawler.linksQueue.add("https://www.gutenberg.org/");
+        }
+        int counter = 1;
+        List<Thread> threads = new ArrayList<>();
+        while(Crawler.numThreads >= counter) {
+            Thread t = new Thread (new Crawler()); t.setName(String.valueOf(counter));
+            threads.add(t);
+            counter++;
+        }
+        for(final Thread t :threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                System.out.println("                     ----------------- Error Thread has been interupted -----------------                     ");
+            }
+        }
     }
 }
