@@ -5,12 +5,15 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+
+import jdk.nashorn.internal.runtime.regexp.joni.Regex;
 
 public class Crawler implements Runnable {
     private final int MAX_WEBSITES = 5000;
@@ -32,13 +35,83 @@ public class Crawler implements Runnable {
     public Crawler() {
     }
 
-    private String normalizeUrl(String urlStr) {
+    private Boolean isAllowedURL(String url) {
+        try {
+            URI uri = new URI(url);
+            uri = uri.normalize();
+            String path = uri.getPath();
+            // System.out.println(path);
+            String rootPath = url.replace(path, "");
+            String robotPath = rootPath + "/robots.txt";
+            // System.out.println(robotPath);
+
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(new URL(robotPath).openStream()))) {
+                String line = null;
+                Boolean flag = false;
+                final String disallowStartWith = "disallow:";
+                final String userAgentStartWith = "user-agent:";
+                final String userAgentName = "*";
+                while ((line = in.readLine()) != null) {
+                    int offset = line.indexOf("#");
+                    if (-1 != offset) {
+                        line = line.substring(0, offset);
+                    }
+                    line = line.replaceAll(" ", "").replace("\n", "").toLowerCase();
+                    // System.out.println(line);
+
+                    if (flag) {
+                        if (line.startsWith(disallowStartWith)) {
+                            offset = line.indexOf(":");
+                            if (-1 != offset && ++offset < line.length()) {
+                                String disallowedValue;
+                                if (line.charAt(line.length() - 1) == '/') {
+                                    disallowedValue = line.substring(offset, line.length() - 1);
+                                } else {
+                                    disallowedValue = line.substring(offset);
+                                }
+                                String disallowedURL = rootPath + disallowedValue;
+                                // System.out.println(disallowedURL);
+                                if (url.length() >= disallowedURL.length()
+                                        && disallowedURL.equals(url.substring(0, disallowedURL.length()))) {
+                                    System.out.println(
+                                            "_________________________________________________________________________________________");
+                                    System.out.println("(Robot.txt): Not allowed to crawl: " + url);
+                                    System.out.println(
+                                            "_________________________________________________________________________________________");
+                                    return false;
+                                }
+                            }
+                        } else if (line.startsWith(userAgentStartWith)) {
+                            break;
+                        }
+                    } else if (line.startsWith(userAgentStartWith)) {
+                        if (userAgentStartWith.length() < line.length()) {
+                            if (line.substring(userAgentStartWith.length()).equals(userAgentName)) {
+                                // System.out.println("FOUND: " + line);
+                                flag = true;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+        } catch (IOException e) {
+            return false;
+        } catch (URISyntaxException e) {
+            return false;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    public String normalizeUrl(String urlStr) {
         if (urlStr == null) {
             return null;
         }
         String path = new String(urlStr);
         if (path != null) {
             path = path.replace("https://", "http://");
+            path = path.toLowerCase();
             if (path.length() > 0 && path.charAt(path.length() - 1) == '/') {
                 path = path.substring(0, path.length() - 1);
             }
@@ -97,8 +170,10 @@ public class Crawler implements Runnable {
                         final String urlText = link.attr("abs:href");
                         // start lock
                         String path = normalizeUrl(urlText); // URL Normalization
-                        synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                            Crawler.linksQueue.add(path);
+                        if (this.isAllowedURL(path)) {
+                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                                Crawler.linksQueue.add(path);
+                            }
                         }
                         // end lock
                     }
@@ -133,12 +208,18 @@ public class Crawler implements Runnable {
                     System.out.println(
                             "_________________________________________________________________________________________");
                 } catch (IOException e) {
-                    System.out.println("                     ----------------- Error IO-Exception while crawling : "
-                            + crawledURL + " -----------------                     ");
+                    System.out.println(
+                            "_________________________________________________________________________________________");
+                    System.out.println("Error IO-Exception while crawling : " + crawledURL);
+                    System.out.println(
+                            "_________________________________________________________________________________________");
                 }
             } catch (MalformedURLException e) {
-                System.out.println("                     ----------------- Error Mal-Formed-URL while crawling : "
-                        + crawledURL + " -----------------                     ");
+                System.out.println(
+                        "_________________________________________________________________________________________");
+                System.out.println("Error Mal-Formed-URL while crawling : " + crawledURL);
+                System.out.println(
+                        "_________________________________________________________________________________________");
             }
         }
     }
@@ -185,6 +266,7 @@ public class Crawler implements Runnable {
             threads.add(t);
             System.out.println("Thread " + t.getName() + " is created");
         }
+
         // start threads
         for (final Thread thread : threads) {
             int count = 0;
