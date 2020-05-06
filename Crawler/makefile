@@ -3,4 +3,4 @@ compile:
 clean_compile:
 	rm -rf Crawler.class
 clean_output:
-	rm -rf Output/*
+	rm -rf Output/* && rm -rf Saved_State/*
