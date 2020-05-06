@@ -25,10 +25,6 @@ public class Crawler implements Runnable {
     public static Queue<String> linksQueue = new LinkedList<>();
     public static Set<String> visitedLinks = new HashSet<>();
 
-    // public void run() {
-    // this.crawling();
-    // }
-
     public Crawler() {
     }
 
@@ -58,6 +54,7 @@ public class Crawler implements Runnable {
                             flag = true;
                         }
                     } else {
+                        System.out.println("Thread (" + Thread.currentThread().getName() + "): Empty Queue List");
                         flag = true;
                     }
                 }
@@ -143,8 +140,9 @@ public class Crawler implements Runnable {
         try {
             File visitedLinksFile = new File("./Saved_state/VisitedLinks.txt");
             Scanner sc = new Scanner(visitedLinksFile);
-            while (sc.hasNextLine())
+            while (sc.hasNextLine()) {
                 Crawler.visitedLinks.add(sc.nextLine());
+            }
         } catch (FileNotFoundException e) {
         }
 
