@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
@@ -38,12 +39,9 @@ public class Crawler implements Runnable {
             // start lock
             boolean flag = false;
             synchronized (Crawler.LOCK_VISITED_SET) {
-                synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                    if (visitedLinks.size() > MAX_WEBSITES || Crawler.linksQueue.isEmpty()) {
-                        flag = true;
-                    } else {
-                        crawledURL = Crawler.linksQueue.poll();
-                    }
+                if (visitedLinks.size() > MAX_WEBSITES) {
+                    flag = true;
+                } else {
                 }
             }
             if (flag) {
@@ -53,8 +51,15 @@ public class Crawler implements Runnable {
             flag = false;
             // start lock
             synchronized (Crawler.LOCK_VISITED_SET) {
-                if (Crawler.visitedLinks.contains(crawledURL)) {
-                    flag = true;
+                synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                    if (!Crawler.linksQueue.isEmpty()) {
+                        crawledURL = Crawler.linksQueue.poll();
+                        if (Crawler.visitedLinks.contains(crawledURL)) {
+                            flag = true;
+                        }
+                    } else {
+                        flag = true;
+                    }
                 }
             }
             if (flag) {
@@ -101,8 +106,10 @@ public class Crawler implements Runnable {
                     // save to saved state
                     synchronized (Crawler.LOCK_LINKS_QUEUE_WRITER) {
                         Crawler.linksQueueWriter = new BufferedWriter(new FileWriter("./Saved_State/LinksQueue.txt"));
-                        for (final String urlStr : linksQueue) {
-                            linksQueueWriter.write(urlStr + '\n');
+                        synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                            for (final String urlStr : Crawler.linksQueue) {
+                                linksQueueWriter.write(urlStr + '\n');
+                            }
                         }
                         Crawler.linksQueueWriter.close();
                     }
@@ -144,11 +151,14 @@ public class Crawler implements Runnable {
         int counter = 1;
         List<Thread> threads = new ArrayList<>();
         String visitedFileName = "./Saved_State/VisitedLinks.txt";
+        String linksQueueFileName = "./Saved_State/LinksQueue.txt";
         try {
             Crawler.visitedLinksWriter = new BufferedWriter(new FileWriter(visitedFileName));
+            Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(linksQueueFileName));
         } catch (IOException e) {
-            System.out.println("                     ----------------- Error IO-Exception Can not open ("
-                    + visitedFileName + ") Exit program -----------------                     ");
+            System.out.println(
+                    "                     ----------------- Error IO-Exception Can not open (" + visitedFileName
+                            + ") or (" + linksQueueFileName + ") Exit program -----------------                     ");
             System.exit(0);
         }
         Thread t;
@@ -160,7 +170,21 @@ public class Crawler implements Runnable {
         }
         // start threads
         for (final Thread thread : threads) {
-            thread.start();
+            int count = 0;
+            synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                count = Crawler.linksQueue.size();
+                if (count >= 1) {
+                    thread.start();
+                }
+            }
+            try {
+                if (count <= 1) {
+                    TimeUnit.SECONDS.sleep(5);
+                }
+            } catch (InterruptedException e) {
+                System.out.println(
+                        "                     ----------------- Error interupted while sleeping -----------------                     ");
+            }
         }
         // join threads
         for (final Thread thread : threads) {
