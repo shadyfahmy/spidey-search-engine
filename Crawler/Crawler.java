@@ -1,5 +1,7 @@
 import java.io.*;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +28,22 @@ public class Crawler implements Runnable {
     public static Set<String> visitedLinks = new HashSet<>();
 
     public Crawler() {
+    }
+
+    private String normalizeUrl(String urlString) throws URISyntaxException {
+        if (urlString == null) {
+            return null;
+        }
+        URI uri = new URI(urlString);
+        uri = uri.normalize();
+        String path = uri.getPath();
+        if (path != null) {
+            path = path.replaceAll("//*/", "/");
+            if (path.length() > 0 && path.charAt(path.length() - 1) == '/') {
+                path = path.substring(0, path.length() - 1);
+            }
+        }
+        return path;
     }
 
     public void run() {
@@ -79,8 +97,9 @@ public class Crawler implements Runnable {
                     for (final Element link : linksFound) {
                         final String urlText = link.attr("abs:href");
                         // start lock
+                        String path = normalizeUrl(urlText); // URL Normalization
                         synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                            Crawler.linksQueue.add(urlText);
+                            Crawler.linksQueue.add(path);
                         }
                         // end lock
                     }
@@ -105,15 +124,14 @@ public class Crawler implements Runnable {
                         Crawler.linksQueueWriter = new BufferedWriter(new FileWriter("./Saved_State/LinksQueue.txt"));
                         synchronized (Crawler.LOCK_LINKS_QUEUE) {
                             for (final String urlStr : Crawler.linksQueue) {
-                                linksQueueWriter.write(urlStr + '\n');
+                                Crawler.linksQueueWriter.write(urlStr + '\n');
                             }
                         }
                         Crawler.linksQueueWriter.close();
                     }
                     synchronized (Crawler.LOCK_VISIted_SET_WRITER) {
-                        visitedLinksWriter.write(crawledURL + '\n');
+                        Crawler.visitedLinksWriter.write(crawledURL + '\n');
                     }
-
                 } catch (IOException e) {
                     System.out.println("                     ----------------- Error IO-Exception while crawling : "
                             + crawledURL + " -----------------                     ");
@@ -129,10 +147,12 @@ public class Crawler implements Runnable {
         try {
             File urlsFile = new File("./Saved_state/LinksQueue.txt");
             Scanner sc = new Scanner(urlsFile);
-            while (sc.hasNextLine())
+            while (sc.hasNextLine()) {
                 Crawler.linksQueue.add(sc.nextLine());
+            }
             if (Crawler.linksQueue.isEmpty()) {
                 Crawler.linksQueue.add("https://www.gutenberg.org/");
+                System.out.println("QUEUE EMPTY!!");
             }
         } catch (FileNotFoundException e) {
             Crawler.linksQueue.add("https://www.gutenberg.org/");
