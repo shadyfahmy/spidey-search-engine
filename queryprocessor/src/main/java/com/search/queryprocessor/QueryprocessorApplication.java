@@ -1,13 +1,13 @@
-package com.shady.queryprocessor;
+package com.search.queryprocessor;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class QueryProcessorApplication {
+public class QueryprocessorApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(QueryProcessorApplication.class, args);
+		SpringApplication.run(QueryprocessorApplication.class, args);
 	}
 
 }

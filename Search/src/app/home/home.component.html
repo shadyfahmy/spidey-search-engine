@@ -1,0 +1,22 @@
+<div id="maincontainer">
+    <img src="../../assets/logo.png" id="img">
+
+    <form id="formfield">
+        <input type="text"
+        placeholder=""
+        id="searchbox"
+        [(ngModel)] = "value"
+        [formControl]="control"
+        [matAutocomplete]="auto">
+        <mat-autocomplete #auto="matAutocomplete">
+        <mat-option *ngFor="let street of filteredStreets | async" [value]="street">
+        {{street}}
+        </mat-option>
+        </mat-autocomplete>
+        <button mat-button *ngIf="value" matSuffix mat-icon-button aria-label="Clear" (click)="value=''">
+            <mat-icon>close</mat-icon>
+        </button>
+    </form>
+
+    <button mat-raised-button color="secondry" id="btn">Search</button>
+</div>
