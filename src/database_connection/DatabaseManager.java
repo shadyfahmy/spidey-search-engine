@@ -5,12 +5,12 @@ import java.io.*;
 import java.util.Properties;
 import java.sql.*;
 
-public class DatabaseConnectionFactory {
+public class DatabaseConnectionManager {
     private String connection_url;
     private String username;
     private String password;
 
-    public DatabaseConnectionFactory() {
+    public DatabaseConnectionManager() {
         File configFile = new File("config.properties");
         try {
             FileReader reader = new FileReader(configFile);
@@ -33,5 +33,10 @@ public class DatabaseConnectionFactory {
         } catch (Exception e) {
             throw new RuntimeException("Cannot connect to database", e);
         }
+    }
+
+    public static void main(String[] args) {
+        // Create database
+
     }
 }
