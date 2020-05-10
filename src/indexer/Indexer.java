@@ -1,12 +1,14 @@
-import java.io.*;
+package indexer;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.tartarus.snowball.ext.EnglishStemmer;
+
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-
-import org.tartarus.snowball.ext.EnglishStemmer;
-
-import org.jsoup.*;
-import org.jsoup.nodes.Document;
 
 public class Indexer {
 

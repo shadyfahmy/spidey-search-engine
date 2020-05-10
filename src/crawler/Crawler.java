@@ -7,15 +7,12 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import jdk.nashorn.internal.runtime.regexp.joni.Regex;
 
 public class Crawler implements Runnable {
     private final int MAX_WEBSITES = 5000;
