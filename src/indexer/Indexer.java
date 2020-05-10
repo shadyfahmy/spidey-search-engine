@@ -40,7 +40,7 @@ public class Indexer {
 //		    }
 //        
 		//Read File
-		File input = new File("../Crawler/Output/http-||www_gutenberg_org|wiki|gutenberg-feeds#navigation.html");
+		File input = new File("html_docs/test.html");
 		Document doc = Jsoup.parse(input, "UTF-8", "http://example.com/");
 		
 		//Create a stemmer
