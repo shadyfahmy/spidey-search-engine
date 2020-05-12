@@ -1,14 +1,14 @@
 package ranker;
 
 import com.mysql.jdbc.exceptions.NotYetImplementedException;
-import database_connection.DatabaseConnectionFactory;
+import database_connection.DatabaseManager;
 import org.ejml.simple.SimpleMatrix;
 import java.sql.*;
 import java.util.HashSet;
 import java.util.HashMap;
 
 public class PageRank {
-    private DatabaseConnectionFactory dbConnectionFactory;
+    private DatabaseManager dbManager;
 
     // TODO: Replace with dynamic count from database
     final static int pagesCount = 4;
@@ -16,13 +16,13 @@ public class PageRank {
     final static double iterativeTolerance = 0.001;
 
     public static void main(String[] args) {
-        DatabaseConnectionFactory dbConnectionFactory = new DatabaseConnectionFactory();
+        DatabaseManager dbConnectionFactory = new DatabaseManager();
         PageRank pageRankCalculator = new PageRank(dbConnectionFactory);
         pageRankCalculator.compareCalculationMethods();
     }
 
-    public PageRank(DatabaseConnectionFactory dbConnectionFactory) {
-        this.dbConnectionFactory = dbConnectionFactory;
+    public PageRank(DatabaseManager dbManager) {
+        this.dbManager = dbManager;
     }
 
     public void compareCalculationMethods() {
@@ -79,7 +79,7 @@ public class PageRank {
 
     private HashMap<Integer, HashSet<Integer>> getPageConnections() throws SQLException {
         String query = "SELECT * FROM page_connections";
-        Statement statement = dbConnectionFactory.getDBConnection().createStatement();
+        Statement statement = dbManager.getDBConnection().createStatement();
         ResultSet result = statement.executeQuery(query);
         HashMap<Integer, HashSet<Integer>> outboundConnections = new HashMap<>(pagesCount);
         for(int pageID = 1; pageID <= pagesCount; pageID++) {

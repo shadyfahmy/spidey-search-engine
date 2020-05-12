@@ -5,12 +5,12 @@ import java.io.*;
 import java.util.Properties;
 import java.sql.*;
 
-public class DatabaseConnectionManager {
+public class DatabaseManager {
     private String connection_url;
     private String username;
     private String password;
 
-    public DatabaseConnectionManager() {
+    public DatabaseManager() {
         File configFile = new File("config.properties");
         try {
             FileReader reader = new FileReader(configFile);
@@ -35,8 +35,13 @@ public class DatabaseConnectionManager {
         }
     }
 
-    public static void main(String[] args) {
-        // Create database
-
+    Connection getMySQLDBConnection() {
+        try {
+            String mysql_db_connection_url = "jdbc:mysql://localhost:3306/mysql";
+            DriverManager.registerDriver(new Driver());
+            return DriverManager.getConnection(mysql_db_connection_url, username, password);
+        } catch (Exception e) {
+            throw new RuntimeException("Cannot connect to MySQL database", e);
+        }
     }
 }
