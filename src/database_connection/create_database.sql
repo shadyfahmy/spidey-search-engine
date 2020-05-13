@@ -1,3 +1,5 @@
+use mysql;
+
 drop database if exists test_search_engine;
 
 create database test_search_engine;
