@@ -13,13 +13,13 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-
 public class Crawler implements Runnable {
     private final int MAX_WEBSITES = 5000;
     private final long startCrawlingTime = System.currentTimeMillis();
     private static final int numThreads = 10;
-    public static final String visitedFileName = "./Saved_State/VisitedLinks.txt";
-    public static final String linksQueueFileName = "./Saved_State/LinksQueue.txt";
+    public static final String visitedFileName = "./src/crawler/Saved_State/VisitedLinks.txt";
+    public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
+    public static final String seedSetFileName = "./src/crawler/seedset.txt";
 
     public static BufferedWriter visitedLinksWriter;
     public static BufferedWriter linksQueueWriter;
@@ -95,6 +95,9 @@ public class Crawler implements Runnable {
                 return true;
             }
         } catch (IOException e) {
+            synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
+                Crawler.linksQueue.add(url);
+            }
             return false;
         } catch (URISyntaxException e) {
             return false;
@@ -109,13 +112,30 @@ public class Crawler implements Runnable {
         }
         String path = new String(urlStr);
         if (path != null) {
-            path = path.replace("https://", "http://");
-            path = path.toLowerCase();
-            if (path.length() > 0 && path.charAt(path.length() - 1) == '/') {
+            String http = "http:/";
+            String https = "https:/";
+            // http:////wWw.Fb.cOm////
+            path = path.replaceAll("//*/", "/"); // http:/wWw.Fb.cOm/
+            if (path.startsWith(http)) {
+                path = path.substring(http.length()); // wWw.Fb.cOm/
+            } else if (path.startsWith(https)) {
+                path = path.substring(https.length());
+            }
+            path = http + "/" + path; // http://wWw.Fb.cOm/
+            if (path.charAt(path.length() - 1) == '/') {
                 path = path.substring(0, path.length() - 1);
             }
+            // http://wWw.Fb.cOm
+            path = path.toLowerCase();
+            // http://www.fb.com
         }
         return path;
+    }
+
+    public void recrawling() {
+        // Response resp = Jsoup.connect(url.toString()).method(Method.HEAD).execute();
+        // String length = resp.header("Last-Modified");
+
     }
 
     public void run() {
@@ -134,6 +154,7 @@ public class Crawler implements Runnable {
             }
             // end lock
             flag = false;
+            boolean flag2 = false;
             // start lock
             synchronized (Crawler.LOCK_VISITED_SET) {
                 synchronized (Crawler.LOCK_LINKS_QUEUE) {
@@ -144,11 +165,24 @@ public class Crawler implements Runnable {
                         }
                     } else {
                         System.out.println("Thread (" + Thread.currentThread().getName() + "): Empty Queue List");
-                        flag = true;
+                        flag2 = true;
                     }
                 }
             }
             if (flag) {
+                continue;
+            }
+            if (flag2) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    System.out.println(
+                            "_________________________________________________________________________________________");
+                    System.out.println("Error interupted while sleeping");
+                    System.out.println(
+                            "_________________________________________________________________________________________");
+
+                }
                 continue;
             }
             // end lock
@@ -158,34 +192,11 @@ public class Crawler implements Runnable {
                     System.out.println("Time: " + (System.currentTimeMillis() - this.startCrawlingTime)
                             + ", crawling url : " + url);
                     final Document urlContent = Jsoup.connect(url.toString()).get();
+                    // final Document test = Jsoup.connect(url.toString()).head();
+                    // System.out.println(test);
                     // start lock
                     synchronized (Crawler.LOCK_VISITED_SET) {
                         Crawler.visitedLinks.add(crawledURL);
-                    }
-                    // end lock
-
-                    final Elements linksFound = urlContent.select("a[href]");
-                    for (final Element link : linksFound) {
-                        final String urlText = link.attr("abs:href");
-                        // start lock
-                        String path = normalizeUrl(urlText); // URL Normalization
-                        if (this.isAllowedURL(path)) {
-                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                Crawler.linksQueue.add(path);
-                            }
-                        }
-                        // end lock
-                    }
-
-                    // save to saved state
-                    synchronized (Crawler.LOCK_LINKS_QUEUE_WRITER) {
-                        Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
-                        synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                            for (final String urlStr : Crawler.linksQueue) {
-                                Crawler.linksQueueWriter.write(urlStr + '\n');
-                            }
-                        }
-                        Crawler.linksQueueWriter.close();
                     }
                     synchronized (Crawler.LOCK_VISIted_SET_WRITER) {
                         Crawler.visitedLinksWriter = new BufferedWriter(new FileWriter(Crawler.visitedFileName, true));
@@ -206,7 +217,42 @@ public class Crawler implements Runnable {
                             + " is now added to output folder");
                     System.out.println(
                             "_________________________________________________________________________________________");
+                    // end lock
+
+                    final Elements linksFound = urlContent.select("a[href]");
+                    for (final Element link : linksFound) {
+                        final String urlText = link.attr("abs:href");
+                        // start lock
+                        String path = normalizeUrl(urlText); // URL Normalization
+                        synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                            synchronized (Crawler.LOCK_VISITED_SET) {
+                                if (Crawler.linksQueue.size() + Crawler.visitedLinks.size() >= MAX_WEBSITES) {
+                                    break;
+                                }
+                            }
+                        }
+                        if (this.isAllowedURL(path)) {
+                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                                Crawler.linksQueue.add(path);
+                            }
+                        }
+                        // end lock
+                    }
+
+                    // save to saved state
+                    synchronized (Crawler.LOCK_LINKS_QUEUE_WRITER) {
+                        Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
+                        synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                            for (final String urlStr : Crawler.linksQueue) {
+                                Crawler.linksQueueWriter.write(urlStr + '\n');
+                            }
+                        }
+                        Crawler.linksQueueWriter.close();
+                    }
                 } catch (IOException e) {
+                    synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
+                        Crawler.linksQueue.add(crawledURL);
+                    }
                     System.out.println(
                             "_________________________________________________________________________________________");
                     System.out.println("Error IO-Exception while crawling : " + crawledURL);
@@ -223,28 +269,58 @@ public class Crawler implements Runnable {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         try {
-            File urlsFile = new File("./Saved_State/LinksQueue.txt");
+//            Date today = new Date();
+//            final long millisecPerDay = 86400000; // 24 * 60 * 60 * 1000
+//            URL url = new URL("http://www.amazon.com");
+//            URLConnection uc = url.openConnection();
+//            uc.setIfModifiedSince(System.currentTimeMillis());
+//            uc.setIfModifiedSince((new Date(today.getTime() - millisecPerDay)).getTime());
+//            Date lastModified = new Date(uc.getIfModifiedSince());
+//            Date t = new Date(today.getTime());
+//            System.out.println("lastModified : " + lastModified);
+//            System.out.println("today : " + t);
+//            System.out.println(t.before(lastModified));
+//            System.exit(0);
+
+            File urlsFile = new File(Crawler.linksQueueFileName);
             Scanner sc = new Scanner(urlsFile);
             while (sc.hasNextLine()) {
                 Crawler.linksQueue.add(sc.nextLine());
             }
             if (Crawler.linksQueue.isEmpty()) {
                 System.out.println("QUEUE EMPTY!!");
-                Crawler.linksQueue.add("http://www.gutenberg.org");
+                File seedSetFile = new File(Crawler.seedSetFileName);
+                Scanner seedSetScanner = new Scanner(seedSetFile);
+                while (seedSetScanner.hasNextLine()) {
+                    Crawler.linksQueue.add(seedSetScanner.nextLine());
+                }
             }
         } catch (FileNotFoundException e) {
-            Crawler.linksQueue.add("http://www.gutenberg.org");
-            System.out.println("Can not open Queue file, QUEUE EMPTY!!");
+            try {
+                System.out.println("Can not open Queue file, QUEUE EMPTY!!, Loading Seed Set");
+                if (Crawler.linksQueue.isEmpty()) {
+                    System.out.println("QUEUE EMPTY!!");
+                    File seedSetFile = new File(Crawler.seedSetFileName);
+                    Scanner seedSetScanner = new Scanner(seedSetFile);
+                    while (seedSetScanner.hasNextLine()) {
+                        Crawler.linksQueue.add(seedSetScanner.nextLine());
+                    }
+                }
+            } catch (FileNotFoundException ex) {
+                System.out.println("Can not open seed seed file, exit program ... ");
+                System.exit(-1);
+            }
         }
         try {
-            File visitedLinksFile = new File("./Saved_State/VisitedLinks.txt");
+            File visitedLinksFile = new File(Crawler.visitedFileName);
             Scanner sc = new Scanner(visitedLinksFile);
             while (sc.hasNextLine()) {
                 Crawler.visitedLinks.add(sc.nextLine());
             }
         } catch (FileNotFoundException e) {
+            System.out.println("Can not find visited links file");
         }
 
         int counter = 1;
