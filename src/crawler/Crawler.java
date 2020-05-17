@@ -1,10 +1,11 @@
 package crawler;
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.*;
+import java.sql.*;
+import java.sql.Date;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -13,24 +14,28 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import database_connection.DatabaseManager;
 
 public class Crawler implements Runnable {
     private final int MAX_WEBSITES = 5000;
     private final long startCrawlingTime = System.currentTimeMillis();
     private static final int numThreads = 10;
-    public static final String visitedFileName = "./src/crawler/Saved_State/VisitedLinks.txt";
     public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
     public static final String seedSetFileName = "./src/crawler/SeedSet.txt";
+    public static final String outputFolderBase = "./src/crawler/Output/";
+
+    public static final DatabaseManager dbManager = new DatabaseManager();
+    public static final SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
 
     public static BufferedWriter visitedLinksWriter;
     public static BufferedWriter linksQueueWriter;
 
     public static final Object LOCK_LINKS_QUEUE = new Object();
-    public static final Object LOCK_VISIted_SET_WRITER = new Object();
+    public static final Object LOCK_INSERT_DB_PAGE = new Object();
     public static final Object LOCK_LINKS_QUEUE_WRITER = new Object();
     public static final Object LOCK_VISITED_SET = new Object();
     public static Queue<String> linksQueue = new LinkedList<>();
-    public static Set<String> visitedLinks = new HashSet<>();
+    public static HashMap<String, java.util.Date> visitedLinks = new HashMap<String, java.util.Date>();
 
     public Crawler() {
     }
@@ -134,11 +139,43 @@ public class Crawler implements Runnable {
     }
 
     public void recrawling() {
-        // Response resp = Jsoup.connect(url.toString()).method(Method.HEAD).execute();
-        // String length = resp.header("Last-Modified");
-
+//            URL url = new URL("http://www.youtube.com");
+//            URLConnection connectionHead = url.openConnection();
+//            String lastModified = connectionHead.getHeaderField("Last-Modified");
+//            Boolean isChanged = true;
+//            if(lastModified != null) {
+//                java.util.Date lastModifiedDate = Crawler.formatter.parse(lastModified);
+//                isChanged = Crawler.visitedLinks.get("http://www.youtube.com").before(lastModifiedDate);
+//            }
     }
-
+    public Document save_url_to_db(String url) throws IOException{
+        Document urlContent = null;
+        try {
+            urlContent = Jsoup.connect(url.toString()).get();
+            Date date = new Date(System.currentTimeMillis());
+            String query = String.format("INSERT INTO page (url, crawled_time) VALUES ('%s', '%s');", url, Crawler.formatter.format(date));
+            String lastIdQuery = String.format("INSERT INTO page (url, crawled_time) VALUES ('%s', '%s');", url, Crawler.formatter.format(date));
+            Connection connection = dbManager.getDBConnection();
+            Statement stmt = connection.createStatement();
+            int rowsAffected = stmt.executeUpdate( query, Statement.RETURN_GENERATED_KEYS );
+            ResultSet rs = stmt.getGeneratedKeys();
+            stmt.close();
+            connection.close();
+            rs.beforeFirst();
+            rs.next();
+            int id = rs.getInt(1);
+            System.out.println("ID: "+ id);
+            BufferedWriter writer = new BufferedWriter(new FileWriter(Crawler.outputFolderBase + id + ".html"));
+            writer.write(urlContent.toString());
+            writer.close();
+            synchronized (Crawler.LOCK_VISITED_SET) {
+                Crawler.visitedLinks.put(url, date);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return urlContent;
+    }
     public void run() {
         System.out.println("Thread (" + Thread.currentThread().getName() + "): starts running");
         while (true) {
@@ -161,7 +198,7 @@ public class Crawler implements Runnable {
                 synchronized (Crawler.LOCK_LINKS_QUEUE) {
                     if (!Crawler.linksQueue.isEmpty()) {
                         crawledURL = Crawler.linksQueue.poll();
-                        if (Crawler.visitedLinks.contains(crawledURL)) {
+                        if (Crawler.visitedLinks.containsKey(crawledURL)) {
                             flag = true;
                         }
                     } else {
@@ -192,63 +229,46 @@ public class Crawler implements Runnable {
                 try {
                     System.out.println("Time: " + (System.currentTimeMillis() - this.startCrawlingTime)
                             + ", crawling url : " + url);
-                    final Document urlContent = Jsoup.connect(url.toString()).get();
-                    // final Document test = Jsoup.connect(url.toString()).head();
-                    // System.out.println(test);
-                    // start lock
-                    synchronized (Crawler.LOCK_VISITED_SET) {
-                        Crawler.visitedLinks.add(crawledURL);
-                    }
-                    synchronized (Crawler.LOCK_VISIted_SET_WRITER) {
-                        Crawler.visitedLinksWriter = new BufferedWriter(new FileWriter(Crawler.visitedFileName, true));
-                        Crawler.visitedLinksWriter.write(crawledURL + '\n');
-                        Crawler.visitedLinksWriter.close();
-                    }
-                    // Download to the disk
-                    String fileName = new String(crawledURL);
-                    fileName = fileName.replace(":", "-");
-                    fileName = fileName.replace(".", "_");
-                    fileName = fileName.replace("/", "|");
-                    BufferedWriter writer = new BufferedWriter(new FileWriter("./Output/" + fileName + ".html"));
-                    writer.write(urlContent.toString());
-                    writer.close();
-                    System.out.println(
-                            "_________________________________________________________________________________________");
-                    System.out.println("Thread (" + Thread.currentThread().getName() + "): " + crawledURL
-                            + " is now added to output folder");
-                    System.out.println(
-                            "_________________________________________________________________________________________");
-                    // end lock
+                    Document urlContent = save_url_to_db(url.toString());
+                    if(urlContent != null) {
+                        System.out.println(
+                                "_________________________________________________________________________________________");
+                        System.out.println("Thread (" + Thread.currentThread().getName() + "): " + crawledURL
+                                + " is now added to output folder");
+                        System.out.println(
+                                "_________________________________________________________________________________________");
+                        // end lock
 
-                    final Elements linksFound = urlContent.select("a[href]");
-                    for (final Element link : linksFound) {
-                        final String urlText = link.attr("abs:href");
-                        // start lock
-                        String path = normalizeUrl(urlText); // URL Normalization
-                        synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                            synchronized (Crawler.LOCK_VISITED_SET) {
-                                if (Crawler.linksQueue.size() + Crawler.visitedLinks.size() >= MAX_WEBSITES) {
-                                    break;
+                        final Elements linksFound = urlContent.select("a[href]");
+                        for (final Element link : linksFound) {
+                            final String urlText = link.attr("abs:href");
+                            // start lock
+                            String path = normalizeUrl(urlText); // URL Normalization
+                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                                synchronized (Crawler.LOCK_VISITED_SET) {
+                                    if (Crawler.linksQueue.size() + Crawler.visitedLinks.size() >= MAX_WEBSITES) {
+                                        break;
+                                    }
                                 }
                             }
-                        }
-                        if (this.isAllowedURL(path)) {
-                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                Crawler.linksQueue.add(path);
+                            if (this.isAllowedURL(path)) {
+                                synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                                    Crawler.linksQueue.add(path);
+                                }
                             }
+                            // end lock
                         }
-                        // end lock
-                    }
 
-                    // save to saved state
-                    synchronized (Crawler.LOCK_LINKS_QUEUE_WRITER) {
-                        Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
-                        synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                            for (final String urlStr : Crawler.linksQueue) {
-                                Crawler.linksQueueWriter.write(urlStr + '\n');
+                        // save to saved state
+                        synchronized (Crawler.LOCK_LINKS_QUEUE_WRITER) {
+                            Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
+                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                                for (final String urlStr : Crawler.linksQueue) {
+                                    Crawler.linksQueueWriter.write(urlStr + '\n');
+                                }
                             }
+                            Crawler.linksQueueWriter.close();
                         }
-                        Crawler.linksQueueWriter.close();
                     }
                 } catch (IOException e) {
                     synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
@@ -270,22 +290,25 @@ public class Crawler implements Runnable {
         }
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
+        Crawler.formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
         try {
-//            Date today = new Date();
-//            final long millisecPerDay = 86400000; // 24 * 60 * 60 * 1000
-//            URL url = new URL("http://www.amazon.com");
-//            URLConnection uc = url.openConnection();
-//            uc.setIfModifiedSince(System.currentTimeMillis());
-//            uc.setIfModifiedSince((new Date(today.getTime() - millisecPerDay)).getTime());
-//            Date lastModified = new Date(uc.getIfModifiedSince());
-//            Date t = new Date(today.getTime());
-//            System.out.println("lastModified : " + lastModified);
-//            System.out.println("today : " + t);
-//            System.out.println(t.before(lastModified));
-//            System.exit(0);
-//            DatabaseManager dbManager = new DatabaseManager();
-//            dbManager.getDBConnection()
+            Date date = new Date(System.currentTimeMillis());
+            String query = String.format("SELECT * FROM page;");
+            Connection connection = dbManager.getDBConnection();
+            Statement statement = connection.createStatement();
+            ResultSet result = statement.executeQuery(query);
+            System.out.println(result);
+            while (result.next()) {
+                String url = result.getString("url");
+                String crawled_time = result.getString("crawled_time");
+                java.util.Date crawledDate = Crawler.formatter.parse(crawled_time);
+                Crawler.visitedLinks.put(url, crawledDate);
+            }
+            result.close();
+            statement.close();
+            connection.close();
+
             File urlsFile = new File(Crawler.linksQueueFileName);
             Scanner sc = new Scanner(urlsFile);
             while (sc.hasNextLine()) {
@@ -314,26 +337,18 @@ public class Crawler implements Runnable {
                 System.out.println("Can not open seed seed file, exit program ... ");
                 System.exit(-1);
             }
-        }
-        try {
-            File visitedLinksFile = new File(Crawler.visitedFileName);
-            Scanner sc = new Scanner(visitedLinksFile);
-            while (sc.hasNextLine()) {
-                Crawler.visitedLinks.add(sc.nextLine());
-            }
-        } catch (FileNotFoundException e) {
-            System.out.println("Can not find visited links file");
+        } catch (ParseException | SQLException e) {
+            System.out.println("Can not connect to Data base or parsing Date error ... ");
+            e.printStackTrace();
         }
 
         int counter = 1;
         List<Thread> threads = new ArrayList<>();
         try {
-            Crawler.visitedLinksWriter = new BufferedWriter(new FileWriter(Crawler.visitedFileName, true));
             Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
         } catch (IOException e) {
             System.out.println("                     ----------------- Error IO-Exception Can not open ("
-                    + Crawler.visitedFileName + ") or (" + Crawler.linksQueueFileName
-                    + ") Exit program -----------------                     ");
+                    + Crawler.linksQueueFileName + ") Exit program -----------------                     ");
             System.exit(0);
         }
         Thread t;

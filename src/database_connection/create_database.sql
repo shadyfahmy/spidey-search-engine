@@ -11,6 +11,7 @@ drop table if exists page;
 create table page (
 	id serial,
 	url tinytext not null,
+	crawled_time tinytext not null,
 	page_rank float,
 	primary key (id)
 );
