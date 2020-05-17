@@ -6,13 +6,14 @@ import java.sql.*;
 import java.util.HashSet;
 import java.util.HashMap;
 
-// TODO: Try to optimize writing to database
-// Assuming page ids are continuous, starting at 1
+// TODO: Try to optimize writing to database (choose which method is best)
+// Assuming page ids are continuous
 public class PageRank {
     private final DatabaseManager dbManager;
     private Connection connection;
 
     private int pagesCount;
+    private int startingID;
     final static double dampingFactor = 0.85;
     final static double iterativeTolerance = 0.001;
 
@@ -28,9 +29,9 @@ public class PageRank {
 
     public void compareCalculationMethods() {
         long start = System.nanoTime();
-        SimpleMatrix iterativePageRanks = calcPageRanks(false);
+        SimpleMatrix iterativePageRanks = updatePageRanks(false);
         long checkpoint = System.nanoTime();
-        SimpleMatrix algebraicPageRanks = calcPageRanks(true);
+        SimpleMatrix algebraicPageRanks = updatePageRanks(true);
         long end = System.nanoTime();
         System.out.println("Iterative execution time: " + ((checkpoint - start) / 1000000) + " ms");
         iterativePageRanks.print();
@@ -38,10 +39,10 @@ public class PageRank {
         algebraicPageRanks.print();
     }
 
-    public SimpleMatrix calcPageRanks(boolean isAlgebraic) {
+    public SimpleMatrix updatePageRanks(boolean isAlgebraic) {
         try {
             connection = dbManager.getDBConnection();
-            pagesCount = getPagesCount();
+            updatePagesMetadata();
             HashMap<Integer, HashSet<Integer>> pageConnections = getPageConnections();
             SimpleMatrix adjacencyMatrix = buildAdjacencyMatrix(pageConnections);
             SimpleMatrix pageRanks;
@@ -60,23 +61,23 @@ public class PageRank {
     }
 
     private SimpleMatrix calcPageRanksAlgebraic(SimpleMatrix adjacencyMatrix) {
-        SimpleMatrix dampingScale = new SimpleMatrix(pagesCount, 1);
-        dampingScale.fill(1.0 - dampingFactor / pagesCount);
+        SimpleMatrix dampingMatrix = new SimpleMatrix(pagesCount, 1);
+        dampingMatrix.fill(1.0 - dampingFactor / pagesCount);
         return (
                 SimpleMatrix.identity(pagesCount).minus(adjacencyMatrix.scale(dampingFactor))
-        ).invert().mult(dampingScale);
+        ).invert().mult(dampingMatrix);
     }
 
     private SimpleMatrix calcPageRanksIterative(SimpleMatrix adjacencyMatrix) {
-        SimpleMatrix dampingScale = new SimpleMatrix(pagesCount, 1);
-        dampingScale.fill(1.0 - dampingFactor / pagesCount);
+        SimpleMatrix dampingMatrix = new SimpleMatrix(pagesCount, 1);
+        dampingMatrix.fill(1.0 - dampingFactor / pagesCount);
         SimpleMatrix pageRanks = new SimpleMatrix(pagesCount, 1);
         pageRanks.fill(1.0 / pagesCount);
         adjacencyMatrix = adjacencyMatrix.scale(dampingFactor);
         boolean converged = false;
         SimpleMatrix newPageRanks;
         while(!converged) {
-            newPageRanks = adjacencyMatrix.mult(pageRanks).plus(dampingScale);
+            newPageRanks = adjacencyMatrix.mult(pageRanks).plus(dampingMatrix);
             converged = newPageRanks.minus(pageRanks).elementMaxAbs() < iterativeTolerance;
             pageRanks = newPageRanks;
         }
@@ -91,7 +92,7 @@ public class PageRank {
         query.append(" END");
         PreparedStatement statement = connection.prepareStatement(query.toString());
         for(int i = 0; i < pagesCount; i++) {
-            statement.setInt(2*i+1, i+1);
+            statement.setInt(2*i+1, i + startingID);
             statement.setDouble(2*i+2, pageRanks.get(i, 0));
         }
         statement.execute();
@@ -130,7 +131,7 @@ public class PageRank {
         Statement statement = connection.createStatement();
         ResultSet result = statement.executeQuery(query);
         HashMap<Integer, HashSet<Integer>> outboundConnections = new HashMap<>(pagesCount);
-        for (int pageID = 1; pageID <= pagesCount; pageID++) {
+        for (int pageID = startingID; pageID < pagesCount + startingID; pageID++) {
             outboundConnections.put(pageID, new HashSet<>());
         }
         while (result.next()) {
@@ -147,20 +148,22 @@ public class PageRank {
         pageConnections.forEach((pageID, outboundConnections) -> {
             int outboundConnectionsCount = outboundConnections.size();
             outboundConnections.forEach(outboundPageID ->
-                    adjacencyMatrix.set(outboundPageID - 1, pageID - 1, 1.0/outboundConnectionsCount)
+                    adjacencyMatrix.set(outboundPageID - startingID,
+                                        pageID - startingID,
+                                        1.0/outboundConnectionsCount)
             );
         });
         return adjacencyMatrix;
     }
 
-    private int getPagesCount() throws SQLException {
-        String query = "SELECT COUNT(*) FROM page";
+    private void updatePagesMetadata() throws SQLException {
+        String query = "SELECT COUNT(*), MIN(id) FROM page";
         Statement statement = connection.createStatement();
         ResultSet result = statement.executeQuery(query);
         result.next();
-        int pagesCount = result.getInt(1);
+        this.pagesCount = result.getInt(1);
+        this.startingID = result.getInt(2);
         result.close();
         statement.close();
-        return pagesCount;
     }
 }

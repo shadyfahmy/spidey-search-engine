@@ -26,13 +26,13 @@
     <loaded-nodes>
       <connection connection-id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
         <schema name="mysql" object-types="table" />
-        <schema name="test_search_engine" object-types="table, view, dataset trigger, procedure, function, constraint, index, column" />
+        <schema name="test_search_engine" object-types="index, dataset trigger, function, procedure, view, constraint, table, column" />
       </connection>
     </loaded-nodes>
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-      <console name="MySQL Connection 1" type="STANDARD" schema="test_search_engine" session="Main" />
+      <console name="MySQL Connection 1" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select * from page]]></console>
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">

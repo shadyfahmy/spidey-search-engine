@@ -42,7 +42,7 @@ public class Crawler implements Runnable {
     private static final int numThreads = 10;
     public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
     public static final String seedSetFileName = "./src/crawler/SeedSet.txt";
-    public static final String outputFolderBase = "./src/crawler/Output/";
+    public static final String outputFolderBase = "./html_docs/";
 
     public static final DatabaseManager dbManager = new DatabaseManager();
     public static final SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
