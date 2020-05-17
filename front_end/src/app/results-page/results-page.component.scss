@@ -54,6 +54,7 @@ input:focus {
     padding-bottom: 20px;
     min-height: 100%;
     height: fit-content;
+    padding-bottom: 200px;
 }
 
 #result{
@@ -66,6 +67,10 @@ input:focus {
 }
 
 #result:hover{
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+
+}
+#im:hover{
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
 
 }
@@ -122,4 +127,12 @@ input:focus {
     margin-top: 30px;
     padding-top: 50px;
     z-index: -1;
+}
+
+#night {
+    border-color: white;
+    margin-left: 95%;
+    margin-top: 70px;
+    position:absolute;
+    background-color:  #3F51d8;
 }

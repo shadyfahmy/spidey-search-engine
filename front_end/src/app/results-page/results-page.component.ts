@@ -21,6 +21,7 @@ export class ResultsPageComponent implements OnInit {
   streets: string[];
   filteredStreets: Observable<string[]>;
   results: Result[];
+  night = false;
   images: string[];
   listening = false;
   loading = true;
@@ -46,6 +47,7 @@ export class ResultsPageComponent implements OnInit {
 
   ngOnInit() {
     this.loading = true;
+    console.log("data from local storage = " + localStorage.getItem('id'))
     if (typeof SpeechRecognition === "undefined") {
       console.log("error")
     } else {
