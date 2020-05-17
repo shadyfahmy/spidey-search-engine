@@ -1,6 +1,6 @@
 package ranker;
 
-import database_connection.DatabaseManager;
+import database_manager.DatabaseManager;
 import org.ejml.simple.SimpleMatrix;
 import java.sql.*;
 import java.util.HashSet;

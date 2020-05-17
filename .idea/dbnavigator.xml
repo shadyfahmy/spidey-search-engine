@@ -25,14 +25,13 @@
     <show-object-properties value="true" />
     <loaded-nodes>
       <connection connection-id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-        <schema name="mysql" object-types="table" />
         <schema name="test_search_engine" object-types="index, dataset trigger, function, procedure, view, constraint, table, column" />
       </connection>
     </loaded-nodes>
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-      <console name="MySQL Connection 1" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select * from page]]></console>
+      <console name="MySQL Connection 2" type="STANDARD" schema="mysql" session="Main"><![CDATA[drop database if exists test_search_engine;]]></console>
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
@@ -46,9 +45,6 @@
   </component>
   <component name="DBNavigator.Project.EditorStateManager">
     <last-used-providers />
-  </component>
-  <component name="DBNavigator.Project.FileConnectionMappingManager">
-    <mapping file-url="file://$PROJECT_DIR$/src/database_connection/create_database.sql" connection-id="49c1d82b-e6fb-495f-8886-9d4d06056eb3" session-id="MAIN" current-schema="mysql" />
   </component>
   <component name="DBNavigator.Project.MethodExecutionManager">
     <method-browser />

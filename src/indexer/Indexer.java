@@ -3,7 +3,7 @@ package indexer;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.tartarus.snowball.ext.EnglishStemmer;
-import database_connection.DatabaseManager;
+import database_manager.DatabaseManager;
 
 import java.io.File;
 import java.io.IOException;

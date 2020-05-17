@@ -1,4 +1,4 @@
-package database_connection;
+package database_manager;
 
 import com.mysql.jdbc.Driver;
 import java.io.*;

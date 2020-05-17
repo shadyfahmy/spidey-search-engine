@@ -9,12 +9,11 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import database_connection.DatabaseManager;
+import database_manager.DatabaseManager;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import database_connection.DatabaseManager;
 
 public class Crawler implements Runnable {
     private class UrlObject {
