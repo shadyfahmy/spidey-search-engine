@@ -18,6 +18,9 @@
         <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="Search()">
             <mat-icon>search</mat-icon>
         </button>
+        <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="listen()">
+            <mat-icon [ngStyle]="{'color': listening ? 'red' : nochange}">mic</mat-icon>
+        </button>
     </form>
 </mat-toolbar>
 <mat-progress-bar mode="indeterminate" *ngIf="0"></mat-progress-bar>
