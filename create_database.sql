@@ -22,8 +22,8 @@ create table page_connections (
 	from_page_id bigint unsigned,
 	to_page_id bigint unsigned,
 	primary key (from_page_id, to_page_id),
-	foreign key (from_page_id) references page(id) on delete cascade,
-	foreign key (to_page_id) references page(id) on delete cascade
+	foreign key (from_page_id) references page(id) on delete cascade on update cascade,
+	foreign key (to_page_id) references page(id) on delete cascade on update cascade
 );
 
 drop table if exists word;
@@ -44,6 +44,6 @@ create table word_index (
 	important bool not null,
 	positions json not null,
 	primary key (word_id, page_id),
-	foreign key (page_id) references page(id) on delete cascade,
-	foreign key (word_id) references word(id) on delete cascade
+	foreign key (page_id) references page(id) on delete cascade on update cascade,
+	foreign key (word_id) references word(id) on delete cascade on update cascade
 );
