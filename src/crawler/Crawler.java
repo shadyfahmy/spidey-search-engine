@@ -273,14 +273,6 @@ public class Crawler implements Runnable {
                         "_________________________________________________________________________________________");
             }
         }
-//            URL url = new URL("http://www.youtube.com");
-//            URLConnection connectionHead = url.openConnection();
-//            String lastModified = connectionHead.getHeaderField("Last-Modified");
-//            Boolean isChanged = true;
-//            if(lastModified != null) {
-//                java.util.Date lastModifiedDate = Crawler.formatter.parse(lastModified);
-//                isChanged = Crawler.visitedLinks.get("http://www.youtube.com").before(lastModifiedDate);
-//            }
     }
 
     public void crawling(){
