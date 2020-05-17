@@ -17,7 +17,7 @@ import org.jsoup.select.Elements;
 import database_connection.DatabaseManager;
 
 public class Crawler implements Runnable {
-    private final int MAX_WEBSITES = 5000;
+    public static final int MAX_WEBSITES = 5000;
     private final long startCrawlingTime = System.currentTimeMillis();
     private static final int numThreads = 10;
     public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
@@ -308,18 +308,21 @@ public class Crawler implements Runnable {
             result.close();
             statement.close();
             connection.close();
-
+            // check if in recrawling mode first // if yes don't load queue list
+            Boolean isRecrawling = (Crawler.visitedLinks.size() >= Crawler.MAX_WEBSITES);
             File urlsFile = new File(Crawler.linksQueueFileName);
-            Scanner sc = new Scanner(urlsFile);
-            while (sc.hasNextLine()) {
-                Crawler.linksQueue.add(sc.nextLine());
-            }
-            if (Crawler.linksQueue.isEmpty()) {
-                System.out.println("QUEUE EMPTY!!");
-                File seedSetFile = new File(Crawler.seedSetFileName);
-                Scanner seedSetScanner = new Scanner(seedSetFile);
-                while (seedSetScanner.hasNextLine()) {
-                    Crawler.linksQueue.add(seedSetScanner.nextLine());
+            if(!isRecrawling) {
+                Scanner sc = new Scanner(urlsFile);
+                while (sc.hasNextLine()) {
+                    Crawler.linksQueue.add(sc.nextLine());
+                }
+                if (Crawler.linksQueue.isEmpty()) {
+                    System.out.println("QUEUE EMPTY!!");
+                    File seedSetFile = new File(Crawler.seedSetFileName);
+                    Scanner seedSetScanner = new Scanner(seedSetFile);
+                    while (seedSetScanner.hasNextLine()) {
+                        Crawler.linksQueue.add(seedSetScanner.nextLine());
+                    }
                 }
             }
         } catch (FileNotFoundException e) {
