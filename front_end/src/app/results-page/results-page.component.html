@@ -26,11 +26,14 @@
         </button>
 
     </form>
+    <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="night = !night" id="night">
+        <mat-icon [ngStyle]="{'color': night ? nochange : 'white'}">brightness_3</mat-icon>
+    </button>
 </mat-toolbar>
 <mat-progress-bar mode="indeterminate" *ngIf="0" id="progressbar"></mat-progress-bar>
 <mat-progress-spinner mode="indeterminate" *ngIf="loading" id="spinner" [diameter]=200></mat-progress-spinner>
 
-<div id="mainContainer">
+<div id="mainContainer" [ngStyle]="{'background-color': night ? '#141d26' : nochange, 'padding-bottom': imageSearch ? '200px' : '30px'}">
 
     <div *ngIf="imageSearch" id="imgsContainer">
         <mat-card *ngFor=" let i of images" id="im">
@@ -40,11 +43,11 @@
 
     <div id="resultsContainer" *ngIf="!imageSearch">
 
-        <mat-card id="result" *ngIf="results == null && loading == false"><mat-card-title>
+        <mat-card id="result" *ngIf="results == null && loading == false" [ngStyle]="{'background-color': night ? '#00000017' : nochange, 'color': night ? 'white' : nochange}"><mat-card-title>
             No Results Found
         </mat-card-title></mat-card>
 
-        <mat-card *ngFor=" let r of results " id="result">
+        <mat-card *ngFor=" let r of results " id="result" [ngStyle]="{'background-color': night ? '#00000017' : nochange, 'color': night ? 'white' : nochange}">
             <mat-card-title>
             <a id="siteTitle" href={{r.link}}>{{r.title}}</a>
             </mat-card-title>
@@ -56,7 +59,7 @@
 
 </div>
 
-<div id="footer" [ngStyle]="{'margin-top': imageSearch ? '200px' : nochange}">
+<div id="footer">
     <mat-paginator id="pg"
         [length]="100"
         [pageSize]="10">
