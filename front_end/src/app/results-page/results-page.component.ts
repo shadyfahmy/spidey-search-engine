@@ -4,10 +4,15 @@ import { Observable } from 'rxjs';
 import { startWith, map } from 'rxjs/operators';
 import { Result } from '../common/result';
 import { ResultsService } from '../services/results.service';
+import {
+  RxSpeechRecognitionService,
+  resultList,
+} from '@kamiazya/ngx-speech-recognition';
 
 @Component({
   selector: 'app-results-page',
   templateUrl: './results-page.component.html',
+  providers: [RxSpeechRecognitionService],
   styleUrls: ['./results-page.component.scss']
 })
 export class ResultsPageComponent implements OnInit {
@@ -16,10 +21,22 @@ export class ResultsPageComponent implements OnInit {
   streets: string[];
   filteredStreets: Observable<string[]>;
   results: Result[];
-  constructor(private resultsService: ResultsService) { 
+  listening = false;
+  recognition = new SpeechRecognition
+
+  constructor(private resultsService: ResultsService, public service: RxSpeechRecognitionService) { 
   }
 
   ngOnInit() {
+
+    if (typeof SpeechRecognition === "undefined") {
+      console.log("error")
+    } else {
+      this.recognition.continuous = true;
+      this.recognition.interimResults = true;
+      this.recognition.addEventListener("result", this.onResult);
+    }
+
     this.streets = null;
     this.filteredStreets = this.control.valueChanges.pipe(
       startWith(''),
@@ -56,5 +73,29 @@ export class ResultsPageComponent implements OnInit {
       this.streets = data._embedded.queries;
     })
   }
+
+  listen = () => {
+    if(!this.listening) {
+      console.log("start listening")
+      this.listening = true;
+      this.recognition.start();
+    }
+    else{
+      console.log("stop listening")
+      this.listening = false;
+      this.recognition.stop();
+    }
+  };
+
+  onResult = event => {
+    let x =""
+    for (const res of event.results) {
+      const text = document.createTextNode(res[0].transcript);
+
+      x = x + text.textContent;
+    }
+    console.log(x);
+    this.value = x;
+  };
 
 }
