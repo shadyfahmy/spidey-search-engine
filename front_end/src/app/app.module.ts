@@ -19,7 +19,7 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatPaginatorModule} from '@angular/material/paginator';
 import {ScrollingModule} from '@angular/cdk/scrolling';
 import { ResultsService } from './services/results.service';
-
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
 
 
@@ -34,6 +34,7 @@ import { ResultsService } from './services/results.service';
   imports: [
     BrowserModule,
     MatPaginatorModule,
+    MatProgressSpinnerModule,
     MatProgressBarModule,
     MatButtonModule,
     ScrollingModule,

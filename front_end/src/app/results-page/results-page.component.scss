@@ -24,7 +24,7 @@
     
 #formfield{
     height: 34px;
-    width: 650px;
+    width: 700px;
     margin-left: 150px;
     text-align: left;
     background-color: white;
@@ -49,9 +49,11 @@ input:focus {
 }
 
 #mainContainer{
-    /*background-color: #141d26;*/
+    //background-color: #141d26;
     margin-bottom: -20px;
     padding-bottom: 20px;
+    min-height: 100%;
+    height: fit-content;
 }
 
 #result{
@@ -99,4 +101,25 @@ input:focus {
     color: white;
 
     width: fit-content;
+}
+
+#spinner {
+    margin-top: 15%;
+    margin-left: 40%;
+    margin-right: 30%;
+    position: absolute;
+}
+
+#im{
+    float: left;
+    margin: 5px;
+    width: 200px;
+    height: 200px;
+}
+
+#imgsContainer {
+    margin-left: 60px;
+    margin-top: 30px;
+    padding-top: 50px;
+    z-index: -1;
 }
