@@ -8,6 +8,7 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import database_connection.DatabaseManager;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -19,7 +20,7 @@ public class Crawler implements Runnable {
     private static final int numThreads = 10;
     public static final String visitedFileName = "./src/crawler/Saved_State/VisitedLinks.txt";
     public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
-    public static final String seedSetFileName = "./src/crawler/seedset.txt";
+    public static final String seedSetFileName = "./src/crawler/SeedSet.txt";
 
     public static BufferedWriter visitedLinksWriter;
     public static BufferedWriter linksQueueWriter;
@@ -283,7 +284,8 @@ public class Crawler implements Runnable {
 //            System.out.println("today : " + t);
 //            System.out.println(t.before(lastModified));
 //            System.exit(0);
-
+//            DatabaseManager dbManager = new DatabaseManager();
+//            dbManager.getDBConnection()
             File urlsFile = new File(Crawler.linksQueueFileName);
             Scanner sc = new Scanner(urlsFile);
             while (sc.hasNextLine()) {
