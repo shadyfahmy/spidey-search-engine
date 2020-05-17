@@ -148,35 +148,8 @@ public class Crawler implements Runnable {
 //                isChanged = Crawler.visitedLinks.get("http://www.youtube.com").before(lastModifiedDate);
 //            }
     }
-    public Document save_url_to_db(String url) throws IOException{
-        Document urlContent = null;
-        try {
-            urlContent = Jsoup.connect(url.toString()).get();
-            Date date = new Date(System.currentTimeMillis());
-            String query = String.format("INSERT INTO page (url, crawled_time) VALUES ('%s', '%s');", url, Crawler.formatter.format(date));
-            String lastIdQuery = String.format("INSERT INTO page (url, crawled_time) VALUES ('%s', '%s');", url, Crawler.formatter.format(date));
-            Connection connection = dbManager.getDBConnection();
-            Statement stmt = connection.createStatement();
-            int rowsAffected = stmt.executeUpdate( query, Statement.RETURN_GENERATED_KEYS );
-            ResultSet rs = stmt.getGeneratedKeys();
-            stmt.close();
-            connection.close();
-            rs.beforeFirst();
-            rs.next();
-            int id = rs.getInt(1);
-            System.out.println("ID: "+ id);
-            BufferedWriter writer = new BufferedWriter(new FileWriter(Crawler.outputFolderBase + id + ".html"));
-            writer.write(urlContent.toString());
-            writer.close();
-            synchronized (Crawler.LOCK_VISITED_SET) {
-                Crawler.visitedLinks.put(url, date);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return urlContent;
-    }
-    public void run() {
+
+    public void crawling(){
         System.out.println("Thread (" + Thread.currentThread().getName() + "): starts running");
         while (true) {
             String crawledURL = "";
@@ -288,6 +261,38 @@ public class Crawler implements Runnable {
                         "_________________________________________________________________________________________");
             }
         }
+    }
+    public Document save_url_to_db(String url) throws IOException{
+        Document urlContent = null;
+        try {
+            urlContent = Jsoup.connect(url.toString()).get();
+            Date date = new Date(System.currentTimeMillis());
+            String query = String.format("INSERT INTO page (url, crawled_time) VALUES ('%s', '%s');", url, Crawler.formatter.format(date));
+            String lastIdQuery = String.format("INSERT INTO page (url, crawled_time) VALUES ('%s', '%s');", url, Crawler.formatter.format(date));
+            Connection connection = dbManager.getDBConnection();
+            Statement stmt = connection.createStatement();
+            int rowsAffected = stmt.executeUpdate( query, Statement.RETURN_GENERATED_KEYS );
+            ResultSet rs = stmt.getGeneratedKeys();
+            stmt.close();
+            connection.close();
+            rs.beforeFirst();
+            rs.next();
+            int id = rs.getInt(1);
+            System.out.println("ID: "+ id);
+            BufferedWriter writer = new BufferedWriter(new FileWriter(Crawler.outputFolderBase + id + ".html"));
+            writer.write(urlContent.toString());
+            writer.close();
+            synchronized (Crawler.LOCK_VISITED_SET) {
+                Crawler.visitedLinks.put(url, date);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return urlContent;
+    }
+    public void run() {
+        crawling();
+        recrawling();
     }
 
     public static void main(String[] args) {
