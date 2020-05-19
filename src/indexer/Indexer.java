@@ -191,146 +191,150 @@ public class Indexer implements Runnable{
 				e.printStackTrace();
 			}
 			//Database Access
-			synchronized (dbManager) {
 				try {
 					PreparedStatement pst;
 					String sql;
 					ResultSet rs;
-					//Populate page table with title, description, and indexing time.
-					SimpleDateFormat formatter = new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
-					formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
-					Date now = new Date(System.currentTimeMillis());
-					sql = "UPDATE page SET description = ? , title = ?, indexed_time = ? where (id = ?)";
-					pst = connection.prepareStatement(sql);
-					pst.setString(1, description);
-					pst.setString(2, title);
-					pst.setString(3, formatter.format(now));
-					pst.setInt(4, thisPageID);
-					pst.executeUpdate();
+					synchronized (dbManager) {
 
-					//Recrawling Logic
-					if (recrawl) {
-						sql = "DELETE FROM page_connections WHERE from_page_id = ?";
+						//Populate page table with title, description, and indexing time.
+						SimpleDateFormat formatter = new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
+						formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
+						Date now = new Date(System.currentTimeMillis());
+						sql = "UPDATE page SET description = ? , title = ?, indexed_time = ? where (id = ?)";
 						pst = connection.prepareStatement(sql);
-						pst.setInt(1,thisPageID);
+						pst.setString(1, description);
+						pst.setString(2, title);
+						pst.setString(3, formatter.format(now));
+						pst.setInt(4, thisPageID);
 						pst.executeUpdate();
-						sql = "SELECT word.word as word, word_index.word_id as word_id, word.pages_count as pages_count FROM word INNER JOIN word_index ON word.id=word_index.word_id WHERE word_index.page_id = ?;";
-						pst = connection.prepareStatement(sql);
-						pst.setInt(1, thisPageID);
-						rs = pst.executeQuery();
-						while (rs.next()) {
-							String word = rs.getString("word");
-							if (!hm.containsKey(word)) {
-								int wordID = rs.getInt("word_id");
-								int pagesCountDB = rs.getInt("pages_count");
-								pagesCountDB--;
-								sql = "UPDATE word SET pages_count = ? WHERE id = ?";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1, pagesCountDB);
-								pst.setInt(2, wordID);
-								pst.executeUpdate();
-								sql = "DELETE FROM word_index WHERE page_id = ? and word_id = ?";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1,thisPageID);
-								pst.setInt(1,wordID);
-								pst.executeUpdate();
-							}
-						}
 
-					}
-
-					//Populate page_connections table
-					sql = "insert ignore into page_connections (from_page_id, to_page_id) values (?,?)";
-					pst = connection.prepareStatement(sql);
-					for (int i = 0; i < pagesMentioned.size(); i++) {
-						pst.setInt(1, thisPageID);
-						pst.setInt(2, pagesMentioned.get(i));
-						pst.addBatch();
-					}
-					pst.executeBatch();
-					connection.commit();
-
-					//Populate word_index and word tables
-					for (HashMap.Entry<String, Integer> entry : hm.entrySet()) {
-						boolean importantHM = importantWords.containsKey(entry.getKey());
-						sql = "SELECT id FROM word WHERE (word = ?)";
-						pst = connection.prepareStatement(sql);
-						pst.setString(1, entry.getKey());
-						rs = pst.executeQuery();
-						if (rs.next()) {    //exists
-							int wordID = rs.getInt("id");
-							//check if there exists an index of this word in this page
-							sql = "SELECT * FROM word_index WHERE (page_id = ? AND word_id = ?)";
+						//Recrawling Logic
+						if (recrawl) {
+							sql = "DELETE FROM page_connections WHERE from_page_id = ?";
 							pst = connection.prepareStatement(sql);
 							pst.setInt(1, thisPageID);
-							pst.setInt(2, wordID);
+							pst.executeUpdate();
+							sql = "SELECT word.word as word, word_index.word_id as word_id, word.pages_count as pages_count FROM word INNER JOIN word_index ON word.id=word_index.word_id WHERE word_index.page_id = ?;";
+							pst = connection.prepareStatement(sql);
+							pst.setInt(1, thisPageID);
 							rs = pst.executeQuery();
-							if (rs.next()) {    //exists
-								int countDB = rs.getInt("count");
-								boolean importantDB = rs.getBoolean("important");
-								String indices = rs.getString("indices");
-								if (countDB != entry.getValue() || importantDB != importantHM && !indices.contentEquals(hmIndices.get(entry.getKey()))) {
-									sql = "UPDATE word_index SET count = ?, important = ?, indices = ? WHERE (word_id = ? AND page_id = ?)";
-									pst = connection.prepareStatement(sql);
-									pst.setInt(1, entry.getValue());
-									pst.setBoolean(2, importantHM);
-									pst.setString(3, hmIndices.get(entry.getKey()));
-									pst.setInt(4, wordID);
-									pst.setInt(5, thisPageID);
-									pst.executeUpdate();
-								}
-							} else {
-								sql = "INSERT INTO word_index (page_id, word_id, count, important, indices) VALUES (?, ?, ?, ?, ?);";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1, thisPageID);
-								pst.setInt(2, wordID);
-								pst.setInt(3, entry.getValue());
-								pst.setBoolean(4, importantHM);
-								pst.setString(5, hmIndices.get(entry.getKey()));
-								pst.executeUpdate();
-								sql = "SELECT * FROM word WHERE id = ?";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1, wordID);
-								ResultSet rs2 = pst.executeQuery();
-								if (rs2.next()) {
-									int pages_count = rs2.getInt("pages_count");
-									pages_count++;
+							while (rs.next()) {
+								String word = rs.getString("word");
+								if (!hm.containsKey(word)) {
+									int wordID = rs.getInt("word_id");
+									int pagesCountDB = rs.getInt("pages_count");
+									pagesCountDB--;
 									sql = "UPDATE word SET pages_count = ? WHERE id = ?";
 									pst = connection.prepareStatement(sql);
-									pst.setInt(1, pages_count);
+									pst.setInt(1, pagesCountDB);
 									pst.setInt(2, wordID);
 									pst.executeUpdate();
+									sql = "DELETE FROM word_index WHERE page_id = ? and word_id = ?";
+									pst = connection.prepareStatement(sql);
+									pst.setInt(1, thisPageID);
+									pst.setInt(1, wordID);
+									pst.executeUpdate();
 								}
-							}
-						} else {    //does not exist
-							sql = "INSERT INTO word (word, pages_count) VALUES (?, 1)";
-							pst = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-							pst.setString(1, entry.getKey());
-							pst.executeUpdate();
-							rs = pst.getGeneratedKeys();
-							if (rs != null && rs.next()) {
-								int wordID = rs.getInt(1);
-								sql = "INSERT INTO word_index (page_id, word_id, count, important, indices) VALUES (?, ?, ?, ?, ?);";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1, thisPageID);
-								pst.setInt(2, wordID);
-								pst.setInt(3, entry.getValue());
-								pst.setBoolean(4, importantHM);
-								pst.setString(5, hmIndices.get(entry.getKey()));
-								pst.executeUpdate();
-
 							}
 
 						}
 
-
+						//Populate page_connections table
+						sql = "insert ignore into page_connections (from_page_id, to_page_id) values (?,?)";
+						pst = connection.prepareStatement(sql);
+						for (int i = 0; i < pagesMentioned.size(); i++) {
+							pst.setInt(1, thisPageID);
+							pst.setInt(2, pagesMentioned.get(i));
+							pst.addBatch();
+						}
+						pst.executeBatch();
+						connection.commit();
 					}
-					connection.commit();
+					synchronized (dbManager) {
+
+						//Populate word_index and word tables
+						for (HashMap.Entry<String, Integer> entry : hm.entrySet()) {
+							boolean importantHM = importantWords.containsKey(entry.getKey());
+							sql = "SELECT id FROM word WHERE (word = ?)";
+							pst = connection.prepareStatement(sql);
+							pst.setString(1, entry.getKey());
+							rs = pst.executeQuery();
+							if (rs.next()) {    //exists
+								int wordID = rs.getInt("id");
+								//check if there exists an index of this word in this page
+								sql = "SELECT * FROM word_index WHERE (page_id = ? AND word_id = ?)";
+								pst = connection.prepareStatement(sql);
+								pst.setInt(1, thisPageID);
+								pst.setInt(2, wordID);
+								rs = pst.executeQuery();
+								if (rs.next()) {    //exists
+									int countDB = rs.getInt("count");
+									boolean importantDB = rs.getBoolean("important");
+									String indices = rs.getString("indices");
+									if (countDB != entry.getValue() || importantDB != importantHM && !indices.contentEquals(hmIndices.get(entry.getKey()))) {
+										sql = "UPDATE word_index SET count = ?, important = ?, indices = ? WHERE (word_id = ? AND page_id = ?)";
+										pst = connection.prepareStatement(sql);
+										pst.setInt(1, entry.getValue());
+										pst.setBoolean(2, importantHM);
+										pst.setString(3, hmIndices.get(entry.getKey()));
+										pst.setInt(4, wordID);
+										pst.setInt(5, thisPageID);
+										pst.executeUpdate();
+									}
+								} else {
+									sql = "INSERT INTO word_index (page_id, word_id, count, important, indices) VALUES (?, ?, ?, ?, ?);";
+									pst = connection.prepareStatement(sql);
+									pst.setInt(1, thisPageID);
+									pst.setInt(2, wordID);
+									pst.setInt(3, entry.getValue());
+									pst.setBoolean(4, importantHM);
+									pst.setString(5, hmIndices.get(entry.getKey()));
+									pst.executeUpdate();
+									sql = "SELECT * FROM word WHERE id = ?";
+									pst = connection.prepareStatement(sql);
+									pst.setInt(1, wordID);
+									ResultSet rs2 = pst.executeQuery();
+									if (rs2.next()) {
+										int pages_count = rs2.getInt("pages_count");
+										pages_count++;
+										sql = "UPDATE word SET pages_count = ? WHERE id = ?";
+										pst = connection.prepareStatement(sql);
+										pst.setInt(1, pages_count);
+										pst.setInt(2, wordID);
+										pst.executeUpdate();
+									}
+								}
+							} else {    //does not exist
+								sql = "INSERT INTO word (word, pages_count) VALUES (?, 1)";
+								pst = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+								pst.setString(1, entry.getKey());
+								pst.executeUpdate();
+								rs = pst.getGeneratedKeys();
+								if (rs != null && rs.next()) {
+									int wordID = rs.getInt(1);
+									sql = "INSERT INTO word_index (page_id, word_id, count, important, indices) VALUES (?, ?, ?, ?, ?);";
+									pst = connection.prepareStatement(sql);
+									pst.setInt(1, thisPageID);
+									pst.setInt(2, wordID);
+									pst.setInt(3, entry.getValue());
+									pst.setBoolean(4, importantHM);
+									pst.setString(5, hmIndices.get(entry.getKey()));
+									pst.executeUpdate();
+
+								}
+
+							}
+
+
+						}
+						connection.commit();
+					}
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
 
-			}
+
 
 
 
