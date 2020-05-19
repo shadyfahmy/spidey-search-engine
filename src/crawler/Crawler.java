@@ -132,7 +132,7 @@ public class Crawler implements Runnable {
         }
     }
 
-    public String normalizeUrl(String urlStr) {
+    public static String normalizeUrl(String urlStr) {
         if (urlStr == null) {
             return null;
         }

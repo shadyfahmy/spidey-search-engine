@@ -10,8 +10,11 @@ drop table if exists page;
 
 create table page (
 	id serial,
-	url tinytext not null,
+	url text not null,
 	crawled_time tinytext not null,
+	indexed_time tinytext default null,
+	title tinytext default null,
+	description tinytext default null,
 	page_rank float,
 	primary key (id)
 );
@@ -42,7 +45,6 @@ create table word_index (
 	page_id bigint unsigned,
 	count int unsigned not null,
 	important bool not null,
-	positions json not null,
 	primary key (word_id, page_id),
 	foreign key (page_id) references page(id) on delete cascade on update cascade,
 	foreign key (word_id) references word(id) on delete cascade on update cascade
