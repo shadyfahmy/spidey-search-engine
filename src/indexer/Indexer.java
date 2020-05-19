@@ -8,6 +8,7 @@ import org.jsoup.select.Elements;
 import org.tartarus.snowball.ext.EnglishStemmer;
 import database_manager.DatabaseManager;
 
+import javax.xml.transform.Result;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -30,14 +31,26 @@ public class Indexer implements Runnable{
 	private static final int THREADS_COUNT = 10;
 	private static int pagesCount = 0;
 	private static List<String> pages;
+	private static HashMap <Integer, Integer> pagesState;
+	public enum States { SKIP, CRAWL, RECRAWL};
 	private static List<Connection> connections = new ArrayList<>();
 	private static  final KeyLockManager lockManager = KeyLockManagers.newLock();
 
 	private	void UpdateWord(Connection connection,HashMap.Entry<String, Integer> entry, int thisPageID,boolean importantHM, HashMap<String,String> hmIndices) throws SQLException
 	{
 		try {
-			String sql = "SELECT id FROM word WHERE (word = ?)";
+
+			Date now = new Date(System.currentTimeMillis());
+			String sql = "UPDATE page SET description = ? , title = ?, indexed_time = ? where (id = ?)";
 			PreparedStatement pst = connection.prepareStatement(sql);
+			pst.setString(1, description);
+			pst.setString(2, title);
+			pst.setString(3, formatter.format(now));
+			pst.setInt(4, thisPageID);
+			pst.executeUpdate();
+
+			sql = "SELECT id FROM word WHERE (word = ?)";
+			pst = connection.prepareStatement(sql);
 			pst.setString(1, entry.getKey());
 			ResultSet rs = pst.executeQuery();
 			if (rs.next()) {    //exists
@@ -105,6 +118,8 @@ public class Indexer implements Runnable{
 					pst.setBoolean(4, importantHM);
 					pst.setString(5,hmIndices.get(entry.getKey()));
 					pst.executeUpdate();
+					connection.commit();
+
 				}
 
 
@@ -124,7 +139,16 @@ public class Indexer implements Runnable{
 		Connection connection = connections.get(threadNumber);
 
 		for (int p = threadNumber; p < pagesCount; p += THREADS_COUNT) {
-
+			boolean recrawl = false;
+			if(pagesState.containsKey(p))
+			{
+				if(pagesState.get(p) == States.valueOf("SKIP").ordinal())
+					continue;
+				else if(pagesState.get(p) == States.valueOf("RECRAWL").ordinal())
+					recrawl = true;
+			}
+			else
+				continue;
 			String fileName = pages.get(p);
 			String[] fileNameParts = fileName.split("[.]");
 			int htmlIndex = fileNameParts.length - 1;
@@ -141,7 +165,6 @@ public class Indexer implements Runnable{
 				e.printStackTrace();
 
 			}
-			boolean recrawl = false;
 			Elements links = doc.select("a[href]");
 			int thisPageID = Integer.valueOf(fileNameParts[htmlIndex - 1].split("[/]")[fileNameParts[htmlIndex - 1].split("[/]").length - 1]);
 
@@ -171,52 +194,44 @@ public class Indexer implements Runnable{
 			}
 
 
-			sql = "SELECT * from test_search_engine.page WHERE (id = " + thisPageID + ")";
-
-
-			try {
-				Statement st = connection.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-				//pst.setInt(1,thisPageID);
-				rs = st.executeQuery(sql);
-				if (!rs.next())
-					continue;
-				else {
-					try {
-						SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
-						formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
-						String crawledTime = rs.getString("crawled_time");
-						System.out.println("crawled "+ threadNumber + crawledTime);
-						java.util.Date crawledDate = formatter.parse(crawledTime);
-						String indexedTime = rs.getString("indexed_time");
-
-						if (!rs.wasNull()) {
-							System.out.println("indexed "+threadNumber+ indexedTime);
-							java.util.Date indexedDate = formatter.parse(indexedTime);
-							if (indexedDate.getTime() > crawledDate.getTime())
-								continue;
-							else
-								recrawl = true;
-						}
-						Date now = new Date(System.currentTimeMillis());
-						sql = "UPDATE page SET description = ? , title = ?, indexed_time = ? where (id = ?)";
-						pst = connection.prepareStatement(sql);
-						pst.setString(1, description);
-						pst.setString(2, title);
-						pst.setString(3, formatter.format(now));
-						pst.setInt(4, thisPageID);
-						pst.executeUpdate();
-//						rs.updateString("description",description);
-//						rs.updateString("title",title);
-//						System.out.println(Crawler.formatter.format(now) + "is null?" + crawledTime);
-//						rs.updateString("indexed_time", Crawler.formatter.format(now));
-					} catch (ParseException e) {
-						e.printStackTrace();
-					}
-
-				}
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
+//			sql = "SELECT * from test_search_engine.page WHERE (id = ?)";
+//			try {
+//				pst = connection.prepareStatement(sql);
+//				pst.setInt(1,thisPageID);
+//				rs = pst.executeQuery(sql);
+//				if (!rs.next())
+//					continue;
+//				else {
+//					try {
+////						SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
+////						formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
+////						String crawledTime = rs.getString("crawled_time");
+////						java.util.Date crawledDate = formatter.parse(crawledTime);
+////						String indexedTime = rs.getString("indexed_time");
+////
+////						if (!rs.wasNull()) {
+////							java.util.Date indexedDate = formatter.parse(indexedTime);
+////							if (indexedDate.getTime() > crawledDate.getTime())
+////								continue;
+////							else
+////								recrawl = true;
+////						}
+//						Date now = new Date(System.currentTimeMillis());
+//						sql = "UPDATE page SET description = ? , title = ?, indexed_time = ? where (id = ?)";
+//						pst = connection.prepareStatement(sql);
+//						pst.setString(1, description);
+//						pst.setString(2, title);
+//						pst.setString(3, formatter.format(now));
+//						pst.setInt(4, thisPageID);
+//						pst.executeUpdate();
+//					} catch (ParseException e) {
+//						e.printStackTrace();
+//					}
+//
+//				}
+//			} catch (SQLException e) {
+//				e.printStackTrace();
+//			}
 
 
 			ArrayList<Integer> pagesMentioned = new ArrayList<>();
@@ -406,26 +421,143 @@ public class Indexer implements Runnable{
 				}
 
 			}
-
-
-			for (HashMap.Entry<String, Integer> entry : hm.entrySet()) {
-				boolean importantHM = importantWords.containsKey(entry.getKey());
-				//check if word exists
-
-				final HashMap.Entry<String, Integer>entryLambda = entry;
-				lockManager.executeLocked(entry.getKey(), () -> {
-					try {
-						UpdateWord(connection, entryLambda, thisPageID, importantHM,hmIndices);
-					}
-					catch (SQLException e)
-					{
-						e.printStackTrace();
-					}
-				});
-
-
+			//Database Access
+			try {
+				connection.setAutoCommit(false);
+			} catch (SQLException e) {
+				e.printStackTrace();
 			}
+			synchronized (this){
+				try {
+					//Populate page table with title, description, and indexing time.
+					SimpleDateFormat formatter = new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
+					formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
+					Date now = new Date(System.currentTimeMillis());
+					sql = "UPDATE page SET description = ? , title = ?, indexed_time = ? where (id = ?)";
+					pst = connection.prepareStatement(sql);
+					pst.setString(1, description);
+					pst.setString(2, title);
+					pst.setString(3, formatter.format(now));
+					pst.setInt(4, thisPageID);
+					pst.executeUpdate();
 
+					if (recrawl) {
+						sql = "SELECT word.word as word, word_index.word_id as word_id FROM word INNER JOIN word_index ON word.id=word_index.word_id WHERE word_index.page_id = ?;";
+						pst = connection.prepareStatement(sql);
+						pst.setInt(1, thisPageID);
+						rs = pst.executeQuery();
+						while (rs.next()) {
+							String word = rs.getString("word");
+							if (!hm.containsKey(word)) {
+								int wordID = rs.getInt("word_id");
+								sql = "DELETE FROM word_index WHERE word_id = ? and page_id = ?;";
+								pst = connection.prepareStatement(sql);
+								pst.setInt(1, wordID);
+								pst.setInt(2, thisPageID);
+								pst.executeUpdate();
+								sql = "SELECT * FROM word WHERE id = ?";
+								pst = connection.prepareStatement(sql);
+								pst.setInt(1, wordID);
+								ResultSet rs2 = pst.executeQuery();
+								if (rs2.next()) {
+									int pagesCount = rs2.getInt("pages_count");
+									pagesCount--;
+									sql = "UPDATE word SET pages_count = ? WHERE id = ?";
+									pst = connection.prepareStatement(sql);
+									pst.setInt(1, pagesCount);
+									pst.setInt(2, wordID);
+									pst.executeUpdate();
+								}
+							}
+						}
+					}
+
+					for (HashMap.Entry<String, Integer> entry : hm.entrySet()) {
+						boolean importantHM = importantWords.containsKey(entry.getKey());
+						sql = "SELECT id FROM word WHERE (word = ?)";
+						pst = connection.prepareStatement(sql);
+						pst.setString(1, entry.getKey());
+						rs = pst.executeQuery();
+						if (rs.next()) {    //exists
+							int wordID = rs.getInt("id");
+							//check if there exists an index of this word in this page
+							sql = "SELECT * FROM word_index WHERE (page_id = ? AND word_id = ?)";
+							pst = connection.prepareStatement(sql);
+							pst.setInt(1, thisPageID);
+							pst.setInt(2, wordID);
+							rs = pst.executeQuery();
+							if (rs.next()) {    //exists
+								int countDB = rs.getInt("count");
+								boolean importantDB = rs.getBoolean("important");
+								String indices = rs.getString("indices");
+								if (countDB != entry.getValue() || importantDB != importantHM && !indices.contentEquals(hmIndices.get(entry.getKey()))) {
+									sql = "UPDATE word_index SET count = ?, important = ?, indices = ? WHERE (word_id = ? AND page_id = ?)";
+									pst = connection.prepareStatement(sql);
+									pst.setInt(1, entry.getValue());
+									pst.setBoolean(2, importantHM);
+									pst.setString(3, hmIndices.get(entry.getKey()));
+									pst.setInt(4, wordID);
+									pst.setInt(5, thisPageID);
+									pst.executeUpdate();
+								}
+							} else {
+								sql = "INSERT INTO word_index (page_id, word_id, count, important, indices) VALUES (?, ?, ?, ?, ?);";
+								pst = connection.prepareStatement(sql);
+								pst.setInt(1, thisPageID);
+								pst.setInt(2, wordID);
+								pst.setInt(3, entry.getValue());
+								pst.setBoolean(4, importantHM);
+								pst.setString(5, hmIndices.get(entry.getKey()));
+								pst.executeUpdate();
+								sql = "SELECT * FROM word WHERE id = ?";
+								pst = connection.prepareStatement(sql);
+								pst.setInt(1, wordID);
+								ResultSet rs2 = pst.executeQuery();
+								if (rs2.next()) {
+									int pages_count = rs2.getInt("pages_count");
+									pages_count++;
+									sql = "UPDATE word SET pages_count = ? WHERE id = ?";
+									pst = connection.prepareStatement(sql);
+									pst.setInt(1, pages_count);
+									pst.setInt(2, wordID);
+									pst.executeUpdate();
+								}
+							}
+						} else {    //does not exist
+							sql = "INSERT INTO word (word, pages_count) VALUES (?, 1)";
+							pst = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+							pst.setString(1, entry.getKey());
+							;
+							pst.executeUpdate();
+							rs = pst.getGeneratedKeys();
+							if (rs != null && rs.next()) {
+								int wordID = rs.getInt(1);
+								sql = "INSERT INTO word_index (page_id, word_id, count, important, indices) VALUES (?, ?, ?, ?, ?);";
+								pst = connection.prepareStatement(sql);
+								pst.setInt(1, thisPageID);
+								pst.setInt(2, wordID);
+								pst.setInt(3, entry.getValue());
+								pst.setBoolean(4, importantHM);
+								pst.setString(5, hmIndices.get(entry.getKey()));
+								pst.executeUpdate();
+								connection.commit();
+
+							}
+
+						}
+
+
+					}
+				} catch (SQLException e)
+				{
+					e.printStackTrace();
+				}
+		try {
+			connection.commit();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+}
 
 
 
@@ -436,9 +568,18 @@ public class Indexer implements Runnable{
 		}
 
 	}
+
+
+
+
+
+
+
+
 	public static void main(String args[]) throws IOException
 	{
 		dbManager = new DatabaseManager();
+		Connection initialConnection = dbManager.getDBConnection();
 		try (Stream<Path> walk = Files.walk(Paths.get("html_docs/"))) {
 
 					pages = walk.filter(Files::isRegularFile)
@@ -463,4 +604,58 @@ public class Indexer implements Runnable{
 
 	
 	}
+
+
+
+
+
+
+
+
+	private static void initializePages(Connection connection, int pagesCount)
+	{
+
+		try {
+			connection.setAutoCommit(false);
+			String sql = "SELECT * from test_search_engine.page";
+			PreparedStatement pst = connection.prepareStatement(sql);
+			ResultSet rs = pst.executeQuery();
+			while(rs.next())
+			{
+				int pageID = rs.getInt("id");
+				SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
+				formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
+				String crawledTime = rs.getString("crawled_time");
+				java.util.Date crawledDate = formatter.parse(crawledTime);
+				String indexedTime = rs.getString("indexed_time");
+
+				if (!rs.wasNull()) {
+					java.util.Date indexedDate = formatter.parse(indexedTime);
+					if (indexedDate.getTime() > crawledDate.getTime())
+						pagesState.put(pageID,States.valueOf("SKIP").ordinal());
+					else
+						pagesState.put(pageID,States.valueOf("RECRAWL").ordinal());
+
+				}
+				else
+				{
+					pagesState.put(pageID,States.valueOf("CRAWL").ordinal());
+				}
+
+			}
+		}
+		catch(SQLException e)
+		{
+			e.printStackTrace();
+		}
+		catch(ParseException e)
+		{
+			e.printStackTrace();
+		}
+
+	}
+
+
+
+
 }

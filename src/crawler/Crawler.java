@@ -36,7 +36,7 @@ public class Crawler implements Runnable {
         }
     };
 
-    public static final int MAX_WEBSITES = 5000;
+    public static final int MAX_WEBSITES = 30;
     private final long startCrawlingTime = System.currentTimeMillis();
     private static final int numThreads = 10;
     public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
