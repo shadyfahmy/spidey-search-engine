@@ -36,7 +36,7 @@ public class Crawler implements Runnable {
         }
     };
 
-    public static final int MAX_WEBSITES = 5000;
+    public static final int MAX_WEBSITES = 30;
     private final long startCrawlingTime = System.currentTimeMillis();
     private static final int numThreads = 10;
     public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
@@ -174,22 +174,19 @@ public class Crawler implements Runnable {
         while (true) {
             UrlObject crawledURL = null;
             // start lock
-            boolean flag = false;
-            synchronized (Crawler.LOCK_RECRAWLING_QUEUE) {
-                if (Crawler.recrawlingQueue.isEmpty()) {
-                    flag = true;
-                }
-            }
-            // end lock
-            if(flag)
-                break;
+            boolean flagEmptyQueue = false;
             // start lock
             synchronized (Crawler.LOCK_RECRAWLING_QUEUE) {
                 if (!Crawler.recrawlingQueue.isEmpty()) {
                     crawledURL = Crawler.recrawlingQueue.poll();
+                } else {
+                    flagEmptyQueue = true;
                 }
             }
             // end lock
+            if(flagEmptyQueue) {
+                break;
+            }
             try {
                 if(crawledURL == null) {
                     continue;
@@ -392,6 +389,60 @@ public class Crawler implements Runnable {
             }
         }
     }
+
+
+    public void crawlUpdatedLinks(){
+        System.out.println("Thread (" + Thread.currentThread().getName() + "): starts crawl updated links");
+        while (true) {
+            String crawledURL = "";
+            boolean flagVisitedLink = false, flagEmptyQueue = false;
+            // start lock
+            synchronized (Crawler.LOCK_VISITED_SET) {
+                synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                    if (!Crawler.linksQueue.isEmpty()) {
+                        crawledURL = Crawler.linksQueue.poll();
+                        if (Crawler.visitedLinks.containsKey(crawledURL)) {
+                            flagVisitedLink = true;
+                        }
+                    } else {
+                        System.out.println("Thread (" + Thread.currentThread().getName() + "): Empty Queue List");
+                        flagEmptyQueue = true;
+                    }
+                }
+            }
+            if (flagVisitedLink) {
+                continue; // get new one from queue
+            }
+            if (flagEmptyQueue) {
+                break;
+            }
+            // end lock
+            try {
+                final URL url = new URL(crawledURL);
+                try {
+                    System.out.println("Time: " + (System.currentTimeMillis() - this.startCrawlingTime)
+                            + ", crawling new url in recrawling: " + url);
+                    Document urlContent = save_url_to_db(url.toString(), -1);
+                } catch (IOException e) {
+                    synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
+                        Crawler.linksQueue.add(crawledURL);
+                    }
+                    System.out.println(
+                            "_________________________________________________________________________________________");
+                    System.out.println("Error IO-Exception while crawling : " + crawledURL);
+                    System.out.println(
+                            "_________________________________________________________________________________________");
+                }
+            } catch (MalformedURLException e) {
+                System.out.println(
+                        "_________________________________________________________________________________________");
+                System.out.println("Error Mal-Formed-URL while crawling : " + crawledURL);
+                System.out.println(
+                        "_________________________________________________________________________________________");
+            }
+        }
+    }
+
     public Document save_url_to_db(String url, int updateId) throws IOException{
         Document urlContent = null;
         try {
@@ -441,9 +492,10 @@ public class Crawler implements Runnable {
     }
 
     public void run() {
+        crawling(); // before recrawling just crawl new websites
         while(true){
-            crawling(); // before recrawling just crawl new websites, after recrawling crawl new fetched urls in updated websites
             recrawling();
+            crawlUpdatedLinks(); // After recrawling, this function crawls new fetched urls in updated websites
         }
     }
 
