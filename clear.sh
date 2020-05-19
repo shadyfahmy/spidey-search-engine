@@ -1,0 +1,1 @@
+rm -rf ./html_docs/*.html && rm -rf ./src/crawler/Saved_State/*.txt
