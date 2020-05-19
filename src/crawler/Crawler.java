@@ -162,6 +162,7 @@ public class Crawler implements Runnable {
         System.out.println("Thread (" + Thread.currentThread().getName() + "): starts recrawling");
         synchronized (Crawler.LOCK_RECRAWLING_QUEUE) {
             if(!Crawler.recrawlingQueueFilled) {
+                Crawler.linksQueue.clear(); // clear in the start to make sure nothing there
                 Crawler.visitedLinks.entrySet().forEach(entry->{
                     Crawler.recrawlingQueue.add(new UrlObject(entry.getKey(), entry.getValue().date, entry.getValue().id));
                 });
