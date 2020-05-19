@@ -25,12 +25,17 @@
     <show-object-properties value="true" />
     <loaded-nodes>
       <connection connection-id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
+        <schema name="information_schema" object-types="column, table, view" />
+        <schema name="mysql" object-types="function, table, view" />
         <schema name="test_search_engine" object-types="procedure, function, dataset trigger, column, table, view, constraint" />
       </connection>
     </loaded-nodes>
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
+      <console name="MySQL Connection 1" type="STANDARD" schema="mysql" session="Main"><![CDATA[select update_time
+from information_schema.TABLES
+where table_schema = 'test_search_engine' and table_name = 'page']]></console>
       <console name="MySQL Connection 2" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select p.id, p.url, p.title, p.description, indices, relevance * page_rank as score from
     (select page_id, group_concat(indices) as indices, SUM((1 + log(count)) * idf + important) as relevance
     from page p
@@ -44,7 +49,7 @@
     where word = 'about' or word = 'your'
     group by page_id
     order by relevance desc
-    limit 100) r
+    limit 1, 5) r
 join page p on p.id = r.page_id
 order by score desc;
 

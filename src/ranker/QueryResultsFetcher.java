@@ -18,17 +18,20 @@ public class QueryResultsFetcher {
     final int maxSnippets = 5;
 
     public static class Page {
+        int id;
         String url;
         String title;
         String description;
 
-        public Page(String url, String title, String description) {
+        public Page(int id, String url, String title, String description) {
+            this.id = id;
             this.url = url;
             this.title = title;
             this.description = description;
         }
 
         void print() {
+            System.out.println(id);
             System.out.println(url);
             System.out.println(title);
             System.out.println(description);
@@ -41,7 +44,7 @@ public class QueryResultsFetcher {
         ArrayList<String> queryWords = new ArrayList<>();
         queryWords.add("about");
         queryWords.add("your");
-        List<Page> queryResults = queryResultsFetcher.getQueryResults(queryWords, 3);
+        List<Page> queryResults = queryResultsFetcher.getQueryResults(queryWords, 10, 5);
         queryResults.forEach(Page::print);
     }
 
@@ -49,7 +52,7 @@ public class QueryResultsFetcher {
         this.dbManager = dbManager;
     }
 
-    public List<Page> getQueryResults(List<String> queryWords, int resultsCount) {
+    public List<Page> getQueryResults(List<String> queryWords, int offset, int maxCount) {
         try {
             int queryWordsCount = queryWords.size();
 
@@ -67,7 +70,7 @@ public class QueryResultsFetcher {
                     "    where word = ? " + " or word = ? ".repeat(queryWordsCount - 1) +
                     "    group by page_id\n" +
                     "    order by relevance desc\n" +
-                    "    limit ?) r\n" +
+                    "    limit ?, ?) r\n" +
                     "join page p on p.id = r.page_id\n" +
                     "order by score desc;";
 
@@ -77,7 +80,9 @@ public class QueryResultsFetcher {
                 statement.setString(i + 1, queryWords.get(i));
                 statement.setString(queryWordsCount + i + 1, queryWords.get(i));
             }
-            statement.setInt(queryWordsCount * 2 + 1, resultsCount);
+
+            statement.setInt(queryWordsCount * 2 + 1, offset);
+            statement.setInt(queryWordsCount * 2 + 2, maxCount);
 
             ResultSet result = statement.executeQuery();
 
@@ -91,7 +96,7 @@ public class QueryResultsFetcher {
                 if(description == null) {
                     description = getPageSnippets(pageID, getNumericIndices(indices));
                 }
-                queryResults.add(new Page(url, title, description));
+                queryResults.add(new Page(pageID, url, title, description));
             }
             return queryResults;
         }
