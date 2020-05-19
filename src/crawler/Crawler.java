@@ -254,7 +254,7 @@ public class Crawler implements Runnable {
                             delete_from_db(crawledURL.url, crawledURL.id);
                         }
                     }
-                } catch (IOException | ParseException e) {
+                } catch (IOException e) {
                     synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
                         Crawler.recrawlingQueue.add(crawledURL);
                     }
@@ -263,6 +263,8 @@ public class Crawler implements Runnable {
                     System.out.println("Error IO-Exception while crawling : " + crawledURL);
                     System.out.println(
                             "_________________________________________________________________________________________");
+                } catch (ParseException e){
+                    e.printStackTrace();
                 }
             } catch (MalformedURLException e) {
                 System.out.println(
@@ -494,8 +496,10 @@ public class Crawler implements Runnable {
                 System.out.println("Can not open seed seed file, exit program ... ");
                 System.exit(-1);
             }
-        } catch (ParseException | SQLException e) {
+        } catch (SQLException e) {
             System.out.println("Can not connect to Data base or parsing Date error ... ");
+            e.printStackTrace();
+        } catch (ParseException e) {
             e.printStackTrace();
         }
 
