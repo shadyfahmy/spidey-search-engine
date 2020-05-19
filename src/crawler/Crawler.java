@@ -36,7 +36,7 @@ public class Crawler implements Runnable {
         }
     };
 
-    public static final int MAX_WEBSITES = 30;
+    public static final int MAX_WEBSITES = 5000;
     private final long startCrawlingTime = System.currentTimeMillis();
     private static final int numThreads = 10;
     public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
@@ -55,7 +55,6 @@ public class Crawler implements Runnable {
     public static Queue<String> linksQueue = new LinkedList<>();
     public static HashMap<String, UrlInDB> visitedLinks = new HashMap<String, UrlInDB>();
     private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();
-    private static boolean recrawlingQueueFilled = false;
 
     public Crawler() {
     }
@@ -161,14 +160,15 @@ public class Crawler implements Runnable {
     public void recrawling() {
         System.out.println("Thread (" + Thread.currentThread().getName() + "): starts recrawling");
         synchronized (Crawler.LOCK_RECRAWLING_QUEUE) {
-            if(!Crawler.recrawlingQueueFilled) {
+            if (Crawler.recrawlingQueue.isEmpty()) {
                 synchronized (Crawler.LOCK_LINKS_QUEUE) {
                     Crawler.linksQueue.clear(); // clear in the start to make sure nothing there
                 }
-                Crawler.visitedLinks.entrySet().forEach(entry->{
-                    Crawler.recrawlingQueue.add(new UrlObject(entry.getKey(), entry.getValue().date, entry.getValue().id));
-                });
-                Crawler.recrawlingQueueFilled = true;
+                synchronized (Crawler.LOCK_VISITED_SET) {
+                    Crawler.visitedLinks.entrySet().forEach(entry -> {
+                        Crawler.recrawlingQueue.add(new UrlObject(entry.getKey(), entry.getValue().date, entry.getValue().id));
+                    });
+                }
             }
         }
         while (true) {
@@ -207,7 +207,7 @@ public class Crawler implements Runnable {
                     final int delay = 3600000; // ms
                     java.util.Date dateToRecrawl = new Date(System.currentTimeMillis() - delay);
                     // if lastModifiedDate is null update
-                    if(isChanged || (lastModifiedDate == null && downloadDate.after(dateToRecrawl))) {
+                    if(isChanged || (lastModifiedDate == null && downloadDate.before(dateToRecrawl))) {
                         Document urlContent = save_url_to_db(url.toString(), crawledURL.id);
                         if(urlContent != null) {
                             System.out.println(
@@ -223,13 +223,6 @@ public class Crawler implements Runnable {
                                 final String urlText = link.attr("abs:href");
                                 // start lock
                                 String path = normalizeUrl(urlText); // URL Normalization
-                                synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                    synchronized (Crawler.LOCK_VISITED_SET) {
-                                        if (Crawler.linksQueue.size() + Crawler.visitedLinks.size() >= MAX_WEBSITES) {
-                                            break;
-                                        }
-                                    }
-                                }
                                 if (this.isAllowedURL(path)) {
                                     synchronized (Crawler.LOCK_LINKS_QUEUE) {
                                         Crawler.linksQueue.add(path);
@@ -281,36 +274,36 @@ public class Crawler implements Runnable {
         while (true) {
             String crawledURL = "";
             // start lock
-            boolean flag = false;
+            boolean flagReachedToMax = false;
             synchronized (Crawler.LOCK_VISITED_SET) {
                 if (visitedLinks.size() >= MAX_WEBSITES) {
-                    flag = true;
+                    flagReachedToMax = true;
                 }
             }
-            if (flag) {
+            if (flagReachedToMax) {
                 return;
             }
             // end lock
-            flag = false;
-            boolean flag2 = false;
+            boolean flagAlreadyVisited = false;
+            boolean flagEmptyQueue = false;
             // start lock
-            synchronized (Crawler.LOCK_VISITED_SET) {
-                synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                    if (!Crawler.linksQueue.isEmpty()) {
-                        crawledURL = Crawler.linksQueue.poll();
+            synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                if (!Crawler.linksQueue.isEmpty()) {
+                    crawledURL = Crawler.linksQueue.poll();
+                    synchronized (Crawler.LOCK_VISITED_SET) {
                         if (Crawler.visitedLinks.containsKey(crawledURL)) {
-                            flag = true;
+                            flagAlreadyVisited = true;
                         }
-                    } else {
-                        System.out.println("Thread (" + Thread.currentThread().getName() + "): Empty Queue List");
-                        flag2 = true;
                     }
+                } else {
+                    System.out.println("Thread (" + Thread.currentThread().getName() + "): Empty Queue List");
+                    flagEmptyQueue = true;
                 }
             }
-            if (flag) {
+            if (flagAlreadyVisited) {
                 continue;
             }
-            if (flag2) {
+            if (flagEmptyQueue) {
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
@@ -397,17 +390,17 @@ public class Crawler implements Runnable {
             String crawledURL = "";
             boolean flagVisitedLink = false, flagEmptyQueue = false;
             // start lock
-            synchronized (Crawler.LOCK_VISITED_SET) {
-                synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                    if (!Crawler.linksQueue.isEmpty()) {
-                        crawledURL = Crawler.linksQueue.poll();
+            synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                if (!Crawler.linksQueue.isEmpty()) {
+                    crawledURL = Crawler.linksQueue.poll();
+                    synchronized (Crawler.LOCK_VISITED_SET) {
                         if (Crawler.visitedLinks.containsKey(crawledURL)) {
                             flagVisitedLink = true;
                         }
-                    } else {
-                        System.out.println("Thread (" + Thread.currentThread().getName() + "): Empty Queue List");
-                        flagEmptyQueue = true;
                     }
+                } else {
+                    System.out.println("Thread (" + Thread.currentThread().getName() + "): Empty Queue List");
+                    flagEmptyQueue = true;
                 }
             }
             if (flagVisitedLink) {
@@ -429,14 +422,14 @@ public class Crawler implements Runnable {
                     }
                     System.out.println(
                             "_________________________________________________________________________________________");
-                    System.out.println("Error IO-Exception while crawling : " + crawledURL);
+                    System.out.println("Error IO-Exception while crawling new Recrawled links: " + crawledURL);
                     System.out.println(
                             "_________________________________________________________________________________________");
                 }
             } catch (MalformedURLException e) {
                 System.out.println(
                         "_________________________________________________________________________________________");
-                System.out.println("Error Mal-Formed-URL while crawling : " + crawledURL);
+                System.out.println("Error Mal-Formed-URL while crawling new Recrawled links : " + crawledURL);
                 System.out.println(
                         "_________________________________________________________________________________________");
             }
