@@ -14,11 +14,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
+import java.sql.Date;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -178,6 +176,7 @@ public class Indexer implements Runnable{
 				else {
 					try {
 						String crawledTime = rs.getString("crawled_time");
+						System.out.println("BEfore Error : " + crawledTime);
 						java.util.Date crawledDate = Crawler.formatter.parse(crawledTime);
 						String indexedTime = rs.getString("indexed_time");
 
@@ -188,7 +187,8 @@ public class Indexer implements Runnable{
 							else
 								recrawl = true;
 						}
-						java.util.Date now = new Date(System.currentTimeMillis());
+						Date now = new Date(System.currentTimeMillis());
+						System.out.println(Crawler.formatter.format(now));
 						sql = "UPDATE page SET description = ? , title = ?, indexed_time = ? where (id = ?)";
 						pst = connection.prepareStatement(sql);
 						pst.setString(1, description);
@@ -397,6 +397,7 @@ public class Indexer implements Runnable{
 	}
 	public static void main(String args[]) throws IOException
 	{
+		Crawler.formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
 		dbManager = new DatabaseManager();
 		try (Stream<Path> walk = Files.walk(Paths.get("html_docs/"))) {
 

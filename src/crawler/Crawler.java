@@ -408,7 +408,7 @@ public class Crawler implements Runnable {
             rs.beforeFirst();
             rs.next();
             int id = updateId != -1? updateId:rs.getInt(1);
-            System.out.println("ID: "+ id);
+            // System.out.println("ID: "+ id);
             BufferedWriter writer = new BufferedWriter(new FileWriter(Crawler.outputFolderBase + id + ".html"));
             writer.write(urlContent.toString());
             writer.close();
