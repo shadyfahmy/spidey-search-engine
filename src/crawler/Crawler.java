@@ -337,13 +337,6 @@ public class Crawler implements Runnable {
                             final String urlText = link.attr("abs:href");
                             // start lock
                             String path = normalizeUrl(urlText); // URL Normalization
-                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                synchronized (Crawler.LOCK_VISITED_SET) {
-                                    if (Crawler.linksQueue.size() + Crawler.visitedLinks.size() >= MAX_WEBSITES) {
-                                        break;
-                                    }
-                                }
-                            }
                             if (this.isAllowedURL(path)) {
                                 synchronized (Crawler.LOCK_LINKS_QUEUE) {
                                     Crawler.linksQueue.add(path);
