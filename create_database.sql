@@ -33,7 +33,7 @@ drop table if exists word;
 
 create table word (
 	id serial,
-	word varchar(100) not null,
+	word varchar(500) not null,
 	pages_count int unsigned not null,
 	primary key (id)
 );
@@ -45,6 +45,7 @@ create table word_index (
 	page_id bigint unsigned,
 	count int unsigned not null,
 	important bool not null,
+	indices text not null,
 	primary key (word_id, page_id),
 	foreign key (page_id) references page(id) on delete cascade on update cascade,
 	foreign key (word_id) references word(id) on delete cascade on update cascade

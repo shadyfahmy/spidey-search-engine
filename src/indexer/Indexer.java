@@ -1,5 +1,4 @@
 package indexer;
-import crawler.Crawler;
 import de.jkeylockmanager.manager.KeyLockManager;
 import de.jkeylockmanager.manager.KeyLockManagers;
 import org.jsoup.Jsoup;
@@ -8,7 +7,10 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.tartarus.snowball.ext.EnglishStemmer;
 import database_manager.DatabaseManager;
+
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,6 +18,7 @@ import java.nio.file.Paths;
 import java.sql.*;
 import java.sql.Date;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -30,7 +33,7 @@ public class Indexer implements Runnable{
 	private static List<Connection> connections = new ArrayList<>();
 	private static  final KeyLockManager lockManager = KeyLockManagers.newLock();
 
-	private	void UpdateWord(Connection connection,HashMap.Entry<String, Integer> entry, int thisPageID,boolean importantHM ) throws SQLException
+	private	void UpdateWord(Connection connection,HashMap.Entry<String, Integer> entry, int thisPageID,boolean importantHM, HashMap<String,String> hmIndices) throws SQLException
 	{
 		try {
 			String sql = "SELECT id FROM word WHERE (word = ?)";
@@ -48,24 +51,27 @@ public class Indexer implements Runnable{
 				if (rs.next()) {    //exists
 					int countDB = rs.getInt("count");
 					boolean importantDB = rs.getBoolean("important");
-					if (countDB != entry.getValue() || importantDB != importantHM) {
-						sql = "UPDATE word_index SET count = ?, important = ? WHERE (word_id = ? AND page_id = ?)";
+					String indices = rs.getString("indices");
+					if (countDB != entry.getValue() || importantDB != importantHM && !indices.contentEquals(hmIndices.get(entry.getKey()))) {
+						sql = "UPDATE word_index SET count = ?, important = ?, indices = ? WHERE (word_id = ? AND page_id = ?)";
 						pst = connection.prepareStatement(sql);
 						pst.setInt(1,entry.getValue());
 						pst.setBoolean(2,importantHM);
-						pst.setInt(3,wordID);
-						pst.setInt(4,thisPageID);
+						pst.setString(3,hmIndices.get(entry.getKey()));
+						pst.setInt(4,wordID);
+						pst.setInt(5,thisPageID);
 						pst.executeUpdate();
 					}
 				}
 				else
 				{
-					sql = "INSERT INTO word_index (page_id, word_id, count, important) VALUES (?, ?, ?, ?);";
+					sql = "INSERT INTO word_index (page_id, word_id, count, important, indices) VALUES (?, ?, ?, ?, ?);";
 					pst = connection.prepareStatement(sql);
 					pst.setInt(1,thisPageID);
 					pst.setInt(2,wordID);
 					pst.setInt(3,entry.getValue());
 					pst.setBoolean(4,importantHM);
+					pst.setString(5,hmIndices.get(entry.getKey()));
 					pst.executeUpdate();
 					sql = "SELECT * FROM word WHERE id = ?";
 					pst = connection.prepareStatement(sql);
@@ -91,12 +97,13 @@ public class Indexer implements Runnable{
 				rs = pst.getGeneratedKeys();
 				if (rs != null && rs.next()) {
 					int wordID = rs.getInt(1);
-					sql = "INSERT INTO word_index (page_id, word_id, count, important) VALUES (?, ?, ?, ?);";
+					sql = "INSERT INTO word_index (page_id, word_id, count, important, indices) VALUES (?, ?, ?, ?, ?);";
 					pst = connection.prepareStatement(sql);
 					pst.setInt(1, thisPageID);
 					pst.setInt(2, wordID);
 					pst.setInt(3, entry.getValue());
 					pst.setBoolean(4, importantHM);
+					pst.setString(5,hmIndices.get(entry.getKey()));
 					pst.executeUpdate();
 				}
 
@@ -117,6 +124,7 @@ public class Indexer implements Runnable{
 		Connection connection = connections.get(threadNumber);
 
 		for (int p = threadNumber; p < pagesCount; p += THREADS_COUNT) {
+
 			String fileName = pages.get(p);
 			String[] fileNameParts = fileName.split("[.]");
 			int htmlIndex = fileNameParts.length - 1;
@@ -136,15 +144,14 @@ public class Indexer implements Runnable{
 			boolean recrawl = false;
 			Elements links = doc.select("a[href]");
 			int thisPageID = Integer.valueOf(fileNameParts[htmlIndex - 1].split("[/]")[fileNameParts[htmlIndex - 1].split("[/]").length - 1]);
+
 			PreparedStatement pst;
 			String sql;
 			ResultSet rs;
 
 
 			String title = doc.title();
-			String body = doc.body().text();
 			title = title.substring(0, Math.min(title.length(), 255));
-			body = body.substring(0, Math.min(body.length(), 255));
 			Elements metaTags = doc.getElementsByTag("meta");
 			HashMap<String, String> metas = new HashMap<>();
 
@@ -154,8 +161,8 @@ public class Indexer implements Runnable{
 				metas.put(name, content);
 			}
 			String description = metas.get("description");
-			System.out.println("thread is " + threadNumber +" " + description);
-
+			if(description!=null)
+				description = description.substring(0, Math.min(description.length(), 255));
 
 			try {
 				connection.setAutoCommit(true);
@@ -175,25 +182,27 @@ public class Indexer implements Runnable{
 					continue;
 				else {
 					try {
+						SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
+						formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
 						String crawledTime = rs.getString("crawled_time");
-						System.out.println("BEfore Error : " + crawledTime);
-						java.util.Date crawledDate = Crawler.formatter.parse(crawledTime);
+						System.out.println("crawled "+ threadNumber + crawledTime);
+						java.util.Date crawledDate = formatter.parse(crawledTime);
 						String indexedTime = rs.getString("indexed_time");
 
 						if (!rs.wasNull()) {
-							java.util.Date indexedDate = Crawler.formatter.parse(indexedTime);
+							System.out.println("indexed "+threadNumber+ indexedTime);
+							java.util.Date indexedDate = formatter.parse(indexedTime);
 							if (indexedDate.getTime() > crawledDate.getTime())
 								continue;
 							else
 								recrawl = true;
 						}
 						Date now = new Date(System.currentTimeMillis());
-						System.out.println(Crawler.formatter.format(now));
 						sql = "UPDATE page SET description = ? , title = ?, indexed_time = ? where (id = ?)";
 						pst = connection.prepareStatement(sql);
 						pst.setString(1, description);
 						pst.setString(2, title);
-						pst.setString(3, Crawler.formatter.format(now));
+						pst.setString(3, formatter.format(now));
 						pst.setInt(4, thisPageID);
 						pst.executeUpdate();
 //						rs.updateString("description",description);
@@ -224,14 +233,13 @@ public class Indexer implements Runnable{
 							mentionedPageID = rs.getInt(1); //IDTable
 						} else {
 							mentionedPageID = -1;
-							if (threadNumber == 3) System.out.println("No pages found with url:" + urlText);
+							System.out.println("No pages found with url:" + urlText);
 						}
 					} catch (SQLException e) {
 						e.printStackTrace();
 						mentionedPageID = -1;
 					}
 					if (mentionedPageID != -1) {
-						if (threadNumber == 3) System.out.println(thisPageID + "->" + mentionedPageID);
 						pagesMentioned.add(mentionedPageID);
 					}
 
@@ -274,14 +282,21 @@ public class Indexer implements Runnable{
 				ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
 				int wordsListSize = wordsList.size();
 				for (int j = 0; j < wordsListSize; j++) {
+
 					String word = wordsList.get(j).toLowerCase();
-					if (word.equals(""))//|| stopWords.containsKey(word))
+					word = word.substring(0, Math.min(word.length(), 500));
+					stemmer.setCurrent(word);
+					stemmer.stem();
+					String stemmedWord = stemmer.getCurrent();
+
+					if (stemmedWord.equals(""))//|| stopWords.containsKey(stemmedWord))
 					{
 						wordsList.remove(j);
 						wordsListSize--;
 						j--;
 					} else
-						importantWords.put(word, true);
+
+						importantWords.put(stemmedWord, true);
 				}
 			}
 
@@ -289,8 +304,21 @@ public class Indexer implements Runnable{
 			String[] words = doc.text().split("[\\s\\W]");
 			ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
 			HashMap<String, Integer> hm = new HashMap<String, Integer>();
+			HashMap<String, String> hmIndices = new HashMap<String, String>();
+
+			File textFile;
+			BufferedWriter writer;
+			try {
+				textFile = new File("txt_docs/"+thisPageID+".txt");
+				writer = new BufferedWriter(new FileWriter(textFile));
+				textFile.createNewFile();
+			} catch (IOException e) {
+				e.printStackTrace();
+				writer = null;
+			}
 
 			int wordsListSize = wordsList.size();
+
 			for (int i = 0; i < wordsListSize; i++) {
 				String word = wordsList.get(i).toLowerCase();
 				if (word.equals(""))//|| stopWords.containsKey(word))
@@ -298,22 +326,37 @@ public class Indexer implements Runnable{
 					wordsList.remove(i);
 					wordsListSize--;
 					i--;
-				} else {
-
+				}
+				else {
+					word = word.substring(0, Math.min(word.length(), 500));
 					stemmer.setCurrent(word);
 					stemmer.stem();
 					String stemmedWord = stemmer.getCurrent();
 					wordsList.set(i, stemmedWord);
-					if (hm.containsKey(word)) {
-						int count = hm.get(word);
-						count++;
-						hm.replace(word, count);
-					} else {
-						hm.put(word, 1);
-					}
 
+					try {
+						writer.write(word);
+						writer.write(' ');
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					if (hm.containsKey(stemmedWord)) {
+						int count = hm.get(stemmedWord);
+						hmIndices.replace(stemmedWord,hmIndices.get(stemmedWord) + ","+i);
+						count++;
+						hm.replace(stemmedWord, count);
+					} else {
+						hm.put(stemmedWord, 1);
+						hmIndices.put(stemmedWord,String.valueOf(i));
+					}
 				}
 			}
+			try {
+				writer.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
 
 			try {
 				connection.setAutoCommit(true);
@@ -372,7 +415,7 @@ public class Indexer implements Runnable{
 				final HashMap.Entry<String, Integer>entryLambda = entry;
 				lockManager.executeLocked(entry.getKey(), () -> {
 					try {
-						UpdateWord(connection, entryLambda, thisPageID, importantHM);
+						UpdateWord(connection, entryLambda, thisPageID, importantHM,hmIndices);
 					}
 					catch (SQLException e)
 					{
@@ -386,8 +429,6 @@ public class Indexer implements Runnable{
 
 
 
-
-
 			//String  printWords = Arrays.toString(wordsList.toArray());
 			//System.out.println(printWords);
 
@@ -397,7 +438,6 @@ public class Indexer implements Runnable{
 	}
 	public static void main(String args[]) throws IOException
 	{
-		Crawler.formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
 		dbManager = new DatabaseManager();
 		try (Stream<Path> walk = Files.walk(Paths.get("html_docs/"))) {
 
@@ -419,7 +459,6 @@ public class Indexer implements Runnable{
 			t.setName(Integer.toString(i));
 			threads.add(t);
 			t.start();
-
 		}
 
 	
