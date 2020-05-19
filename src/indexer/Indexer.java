@@ -210,7 +210,11 @@ public class Indexer implements Runnable{
 
 					//Recrawling Logic
 					if (recrawl) {
-						sql = "SELECT word.word as word, word_index.word_id as word_id FROM word INNER JOIN word_index ON word.id=word_index.word_id WHERE word_index.page_id = ?;";
+						sql = "DELETE FROM page_connections WHERE from_page_id = ?";
+						pst = connection.prepareStatement(sql);
+						pst.setInt(1,thisPageID);
+						pst.executeUpdate();
+						sql = "SELECT word.word as word, word_index.word_id as word_id, word.pages_count as pages_count FROM word INNER JOIN word_index ON word.id=word_index.word_id WHERE word_index.page_id = ?;";
 						pst = connection.prepareStatement(sql);
 						pst.setInt(1, thisPageID);
 						rs = pst.executeQuery();
@@ -218,26 +222,21 @@ public class Indexer implements Runnable{
 							String word = rs.getString("word");
 							if (!hm.containsKey(word)) {
 								int wordID = rs.getInt("word_id");
-								sql = "DELETE FROM word_index WHERE word_id = ? and page_id = ?;";
+								int pagesCountDB = rs.getInt("pages_count");
+								pagesCountDB--;
+								sql = "UPDATE word SET pages_count = ? WHERE id = ?";
 								pst = connection.prepareStatement(sql);
-								pst.setInt(1, wordID);
-								pst.setInt(2, thisPageID);
+								pst.setInt(1, pagesCountDB);
+								pst.setInt(2, wordID);
 								pst.executeUpdate();
-								sql = "SELECT * FROM word WHERE id = ?";
+								sql = "DELETE FROM word_index WHERE page_id = ? and word_id = ?";
 								pst = connection.prepareStatement(sql);
-								pst.setInt(1, wordID);
-								ResultSet rs2 = pst.executeQuery();
-								if (rs2.next()) {
-									int pagesCount = rs2.getInt("pages_count");
-									pagesCount--;
-									sql = "UPDATE word SET pages_count = ? WHERE id = ?";
-									pst = connection.prepareStatement(sql);
-									pst.setInt(1, pagesCount);
-									pst.setInt(2, wordID);
-									pst.executeUpdate();
-								}
+								pst.setInt(1,thisPageID);
+								pst.setInt(1,wordID);
+								pst.executeUpdate();
 							}
 						}
+
 					}
 
 					//Populate page_connections table
@@ -251,7 +250,7 @@ public class Indexer implements Runnable{
 					pst.executeBatch();
 					connection.commit();
 
-					//update word_index and word tables
+					//Populate word_index and word tables
 					for (HashMap.Entry<String, Integer> entry : hm.entrySet()) {
 						boolean importantHM = importantWords.containsKey(entry.getKey());
 						sql = "SELECT id FROM word WHERE (word = ?)";
