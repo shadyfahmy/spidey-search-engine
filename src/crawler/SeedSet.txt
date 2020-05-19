@@ -4,9 +4,6 @@ http://stackoverflow.com/questions
 http://en.wikipedia.org/wiki/Lists_of_countries_and_territories
 http://www.dailymail.co.uk
 http://www.nytimes.com
-http://youm7.com
-http://www.almasryalyoum.com
-http://akhbarak.net
 http://www.imdb.com
 http://www.rottentomatoes.com
 http://www.reddit.com
@@ -24,10 +21,7 @@ http://twitter.com
 http://www.ncbi.nlm.nih.gov/books/NBK554776
 http://www.care.gov.eg
 http://www.urbandictionary.com
-http://www.alarabiya.net
-http://egypt.souq.com
 http://www.jumia.com.eg
-http://almalnews.com
 http://money.cnn.com/data/markets
 http://www.coursera.org
 http://udacity.com

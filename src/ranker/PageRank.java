@@ -85,12 +85,10 @@ public class PageRank {
     }
 
     private void savePageRanks(SimpleMatrix pageRanks) throws SQLException {
-        StringBuilder query = new StringBuilder("UPDATE page SET page_rank = CASE id");
-        for(int i = 0; i < pagesCount; i++) {
-            query.append(" WHEN ? THEN ?");
-        }
-        query.append(" END");
-        PreparedStatement statement = connection.prepareStatement(query.toString());
+        String query = "UPDATE page SET page_rank = CASE id"
+                + " WHEN ? THEN ?".repeat(pagesCount)
+                + " END";
+        PreparedStatement statement = connection.prepareStatement(query);
         for(int i = 0; i < pagesCount; i++) {
             statement.setInt(2*i+1, i + startingID);
             statement.setDouble(2*i+2, pageRanks.get(i, 0));
@@ -147,10 +145,12 @@ public class PageRank {
         SimpleMatrix adjacencyMatrix = new SimpleMatrix(pagesCount, pagesCount);
         pageConnections.forEach((pageID, outboundConnections) -> {
             int outboundConnectionsCount = outboundConnections.size();
-            outboundConnections.forEach(outboundPageID ->
+            outboundConnections.forEach(outboundPageID -> {
+                if(!pageID.equals(outboundPageID))
                     adjacencyMatrix.set(outboundPageID - startingID,
                                         pageID - startingID,
-                                        1.0/outboundConnectionsCount)
+                                       1.0/outboundConnectionsCount);
+            }
             );
         });
         return adjacencyMatrix;

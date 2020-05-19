@@ -239,7 +239,7 @@ public class Indexer implements Runnable{
 						e.printStackTrace();
 						mentionedPageID = -1;
 					}
-					if (mentionedPageID != -1) {
+					if (mentionedPageID != -1 && mentionedPageID != thisPageID) {
 						pagesMentioned.add(mentionedPageID);
 					}
 
