@@ -41,7 +41,7 @@ public class QueryResultsFetcher {
         ArrayList<String> queryWords = new ArrayList<>();
         queryWords.add("about");
         queryWords.add("your");
-        List<Page> queryResults = queryResultsFetcher.getQueryResults(queryWords);
+        List<Page> queryResults = queryResultsFetcher.getQueryResults(queryWords, 3);
         queryResults.forEach(Page::print);
     }
 
@@ -49,7 +49,7 @@ public class QueryResultsFetcher {
         this.dbManager = dbManager;
     }
 
-    public List<Page> getQueryResults(List<String> queryWords) {
+    public List<Page> getQueryResults(List<String> queryWords, int resultsCount) {
         try {
             int queryWordsCount = queryWords.size();
 
@@ -67,7 +67,7 @@ public class QueryResultsFetcher {
                     "    where word = ? " + " or word = ? ".repeat(queryWordsCount - 1) +
                     "    group by page_id\n" +
                     "    order by relevance desc\n" +
-                    "    limit 100) r\n" +
+                    "    limit ?) r\n" +
                     "join page p on p.id = r.page_id\n" +
                     "order by score desc;";
 
@@ -77,6 +77,7 @@ public class QueryResultsFetcher {
                 statement.setString(i + 1, queryWords.get(i));
                 statement.setString(queryWordsCount + i + 1, queryWords.get(i));
             }
+            statement.setInt(queryWordsCount * 2 + 1, resultsCount);
 
             ResultSet result = statement.executeQuery();
 
