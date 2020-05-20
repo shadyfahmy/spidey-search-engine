@@ -13,6 +13,12 @@ public class Query {
     @Id
     String text;
 
+    public Query(){}
+
+    public Query(String txt) {
+        this.text = txt;
+    }
+
     public void setText(String text) {
         this.text = text;
     }
