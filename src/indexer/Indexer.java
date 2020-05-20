@@ -26,6 +26,7 @@ public class Indexer implements Runnable{
 	private static DatabaseManager dbManager;
 	private static final int THREADS_COUNT = 10;
 	private static int pagesCount = 0;
+	private static int actualPagesCount = 0;
 	private static List<String> pages;
 	private static HashMap <Integer, Integer> pagesState = new HashMap<>();
 	private static HashMap <String, Integer> pageURLToID = new HashMap<>();
@@ -35,6 +36,16 @@ public class Indexer implements Runnable{
 
 	public Indexer(DatabaseManager dbManager) {
 		this.dbManager = dbManager;
+	}
+
+	public static boolean isArabic(String s) {
+		for (int i = 0; i < s.length();) {
+			int c = s.codePointAt(i);
+			if (c >= 0x0600 && c <= 0x06E0)
+				return true;
+			i += Character.charCount(c);
+		}
+		return false;
 	}
 
 	public void run() {
@@ -114,12 +125,22 @@ public class Indexer implements Runnable{
 				ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
 				int wordsListSize = wordsList.size();
 				for (int j = 0; j < wordsListSize; j++) {
+					String word = wordsList.get(j);
+					String stemmedWord;
+					if(!isArabic(word))
+					{
+						word = word.toLowerCase();
+						word = word.substring(0, Math.min(word.length(), 500));
+						stemmer.setCurrent(word);
+						stemmer.stem();
+						stemmedWord = stemmer.getCurrent();
+					}
+					else
+					{
+						stemmedWord = word;
+					}
 
-					String word = wordsList.get(j).toLowerCase();
-					word = word.substring(0, Math.min(word.length(), 500));
-					stemmer.setCurrent(word);
-					stemmer.stem();
-					String stemmedWord = stemmer.getCurrent();
+
 
 					if (stemmedWord.equals(""))//|| stopWords.containsKey(stemmedWord))
 					{
@@ -133,7 +154,7 @@ public class Indexer implements Runnable{
 			}
 
 
-			String[] words = doc.text().split("[\\s\\W]");
+			String[] words = doc.text().split("[\\s\\W][^\\u0600-\\u06FF]");
 			ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
 			HashMap<String, Integer> hm = new HashMap<String, Integer>();
 			HashMap<String, String> hmIndices = new HashMap<String, String>();
@@ -152,18 +173,28 @@ public class Indexer implements Runnable{
 			int wordsListSize = wordsList.size();
 
 			for (int i = 0; i < wordsListSize; i++) {
-				String word = wordsList.get(i).toLowerCase();
+				String word = wordsList.get(i);
 				if (word.equals(""))//|| stopWords.containsKey(word))
 				{
 					wordsList.remove(i);
 					wordsListSize--;
 					i--;
 				}
-				else {
-					word = word.substring(0, Math.min(word.length(), 500));
-					stemmer.setCurrent(word);
-					stemmer.stem();
-					String stemmedWord = stemmer.getCurrent();
+				else
+					{
+						String stemmedWord;
+						if(!isArabic(word))
+						{
+							word = word.toLowerCase();
+							word = word.substring(0, Math.min(word.length(), 500));
+							stemmer.setCurrent(word);
+							stemmer.stem();
+							stemmedWord = stemmer.getCurrent();
+						}
+						else
+						{
+							stemmedWord = word;
+						}
 					wordsList.set(i, stemmedWord);
 
 					try {
@@ -327,11 +358,13 @@ public class Indexer implements Runnable{
 
 						}
 						connection.commit();
-						if (!recrawl) {
+						if (!recrawl)
 							countIndexed++;
-							System.out.println("Indexed: " + countIndexed + "/" + (pagesCount-1));
-						}
+
 					}
+					if (!recrawl)
+						System.out.println("Indexed: " + countIndexed + "/" + actualPagesCount);
+
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
@@ -410,6 +443,7 @@ public class Indexer implements Runnable{
 			ResultSet rs = pst.executeQuery();
 			while(rs.next())
 			{
+				actualPagesCount++;
 				int pageID = rs.getInt("id");
 				SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
 				formatter.setTimeZone(TimeZone.getTimeZone("GMT"));

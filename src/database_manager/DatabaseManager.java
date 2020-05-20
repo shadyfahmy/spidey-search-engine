@@ -19,7 +19,7 @@ public class DatabaseManager {
             username = props.getProperty("dbUsername");
             password = props.getProperty("dbPassword");
             String dbName = props.getProperty("dbName");
-            connection_url = "jdbc:mysql://localhost:3306/" + dbName;
+            connection_url = "jdbc:mysql://localhost:3306/" + dbName + "?useUnicode=true&characterEncoding=UTF-8";
             reader.close();
         } catch (Exception ex) {
             System.out.println(ex.getClass());
