@@ -36,7 +36,7 @@ public class Crawler implements Runnable {
         }
     };
 
-    public static final int MAX_WEBSITES = 5000;
+    public static final int MAX_WEBSITES = 100;
     private final long startCrawlingTime = System.currentTimeMillis();
     private static final int numThreads = 10;
     public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
@@ -216,19 +216,15 @@ public class Crawler implements Runnable {
                                     + " is now added to output folder");
                             System.out.println(
                                     "_________________________________________________________________________________________");
-                            // end lock
-
                             final Elements linksFound = urlContent.select("a[href]");
                             for (final Element link : linksFound) {
                                 final String urlText = link.attr("abs:href");
-                                // start lock
                                 String path = normalizeUrl(urlText); // URL Normalization
                                 if (this.isAllowedURL(path)) {
                                     synchronized (Crawler.LOCK_LINKS_QUEUE) {
                                         Crawler.linksQueue.add(path);
                                     }
                                 }
-                                // end lock
                             }
 
                             // save to saved state
@@ -300,20 +296,7 @@ public class Crawler implements Runnable {
                     flagEmptyQueue = true;
                 }
             }
-            if (flagAlreadyVisited) {
-                continue;
-            }
-            if (flagEmptyQueue) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    System.out.println(
-                            "_________________________________________________________________________________________");
-                    System.out.println("Error interupted while sleeping");
-                    System.out.println(
-                            "_________________________________________________________________________________________");
-
-                }
+            if (flagAlreadyVisited || flagEmptyQueue) {
                 continue;
             }
             // end lock
@@ -331,29 +314,45 @@ public class Crawler implements Runnable {
                         System.out.println(
                                 "_________________________________________________________________________________________");
                         // end lock
-
+                        boolean queueUpdated = false;
                         final Elements linksFound = urlContent.select("a[href]");
                         for (final Element link : linksFound) {
                             final String urlText = link.attr("abs:href");
                             // start lock
                             String path = normalizeUrl(urlText); // URL Normalization
+                            int sizeQueue;
+                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                                sizeQueue = Crawler.linksQueue.size();
+                            }
+                            boolean breakFlag = false;
+                            synchronized (Crawler.LOCK_VISITED_SET) {
+                                if (Crawler.visitedLinks.size() + sizeQueue >= MAX_WEBSITES) {
+                                    breakFlag = true;
+                                }
+                            }
+                            if(breakFlag){
+                                break;
+                            }
                             if (this.isAllowedURL(path)) {
                                 synchronized (Crawler.LOCK_LINKS_QUEUE) {
                                     Crawler.linksQueue.add(path);
                                 }
+                                queueUpdated = true;
                             }
                             // end lock
                         }
 
                         // save to saved state
-                        synchronized (Crawler.LOCK_LINKS_QUEUE_WRITER) {
-                            Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
-                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                for (final String urlStr : Crawler.linksQueue) {
-                                    Crawler.linksQueueWriter.write(urlStr + '\n');
+                        if(queueUpdated) {
+                            synchronized (Crawler.LOCK_LINKS_QUEUE_WRITER) {
+                                Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
+                                synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                                    for (final String urlStr : Crawler.linksQueue) {
+                                        Crawler.linksQueueWriter.write(urlStr + '\n');
+                                    }
                                 }
+                                Crawler.linksQueueWriter.close();
                             }
-                            Crawler.linksQueueWriter.close();
                         }
                     }
                 } catch (IOException e) {
