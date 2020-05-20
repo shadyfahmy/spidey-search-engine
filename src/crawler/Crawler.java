@@ -46,52 +46,39 @@ public class Crawler implements Runnable {
     public static final SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
 
     public static final Object LOCK_LINKS_QUEUE = new Object();
-    public static final Object LOCK_LINKS_QUEUE_WRITER = new Object();
     public static final Object LOCK_VISITED_SET = new Object();
     private static final Object LOCK_RECRAWLING_QUEUE = new Object();
     public static Queue<String> linksQueue = new LinkedList<>();
     public static HashMap<String, UrlInDB> visitedLinks = new HashMap<String, UrlInDB>();
     private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();
+    private static List<Connection> connections = new ArrayList<>();
 
     public Crawler() {
     }
 
-    private void dequeue_state() {
+    private void dequeue_state(Connection connection) {
         try {
             String query = String.format("DELETE FROM state LIMIT 1;");
-            Connection connection = dbManager.getDBConnection();
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate(query);
-            if(rowsAffected == 1){
-                System.out.println("dequeue_state successfully");
-            } else {
-                System.out.println("dequeue_state failed");
-            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void enqueue_state(String url) {
+    private void enqueue_state(Connection connection, String url) {
         try {
             String query = String.format("INSERT INTO state (url) VALUES ('%s');", url);
-            Connection connection = dbManager.getDBConnection();
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate(query);
-            if(rowsAffected == 1){
-                System.out.println("Enqueued_state successfully");
-            } else {
-                System.out.println("Enqueued_state failed");
-            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void clear_state() {
+    private void clear_state(Connection connection) {
         try {
-            String query = String.format("DELETE * FROM state;");
-            Connection connection = dbManager.getDBConnection();
+            String query = String.format("DELETE FROM state;");
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate(query);
         } catch (SQLException e) {
@@ -99,7 +86,7 @@ public class Crawler implements Runnable {
         }
     }
 
-    private Boolean isAllowedURL(String url) {
+    private Boolean isAllowedURL(Connection connection, String url) {
         try {
             URI uri = new URI(url);
             uri = uri.normalize();
@@ -162,6 +149,7 @@ public class Crawler implements Runnable {
         } catch (IOException e) {
             synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
                 Crawler.linksQueue.add(url);
+                enqueue_state(connection, url);
             }
             return false;
         } catch (URISyntaxException e) {
@@ -197,13 +185,13 @@ public class Crawler implements Runnable {
         return path;
     }
 
-    public void recrawling() {
+    public void recrawling(Connection connection) {
         System.out.println("Thread (" + Thread.currentThread().getName() + "): starts recrawling");
         synchronized (Crawler.LOCK_RECRAWLING_QUEUE) {
             if (Crawler.recrawlingQueue.isEmpty()) {
                 synchronized (Crawler.LOCK_LINKS_QUEUE) {
                     Crawler.linksQueue.clear(); // clear in the start to make sure nothing there
-                    clear_state();
+                    clear_state(connection);
                 }
                 synchronized (Crawler.LOCK_VISITED_SET) {
                     Crawler.visitedLinks.entrySet().forEach(entry -> {
@@ -249,7 +237,7 @@ public class Crawler implements Runnable {
                     java.util.Date dateToRecrawl = new Date(System.currentTimeMillis() - delay);
                     // if lastModifiedDate is null update
                     if(isChanged || (lastModifiedDate == null && downloadDate.before(dateToRecrawl))) {
-                        Document urlContent = save_url_to_db(url.toString(), crawledURL.id);
+                        Document urlContent = save_url_to_db(connection, url.toString(), crawledURL.id);
                         if(urlContent != null) {
                             System.out.println(
                                     "_________________________________________________________________________________________");
@@ -261,16 +249,16 @@ public class Crawler implements Runnable {
                             for (final Element link : linksFound) {
                                 final String urlText = link.attr("abs:href");
                                 String path = normalizeUrl(urlText); // URL Normalization
-                                if (this.isAllowedURL(path)) {
+                                if (this.isAllowedURL(connection, path)) {
                                     synchronized (Crawler.LOCK_LINKS_QUEUE) {
                                         Crawler.linksQueue.add(path);
-                                        enqueue_state(path);
+                                        enqueue_state(connection, path);
                                     }
                                 }
                             }
                         } else {
                             // delete from db
-                            delete_from_db(crawledURL.url, crawledURL.id);
+                            delete_from_db(connection, crawledURL.url, crawledURL.id);
                             // delete from HDD
                             File toDeleteFile = new File(outputFolderBase+crawledURL.id+".html");
                             toDeleteFile.delete();
@@ -298,7 +286,7 @@ public class Crawler implements Runnable {
         }
     }
 
-    public void crawling(){
+    public void crawling(Connection connection){
         System.out.println("Thread (" + Thread.currentThread().getName() + "): starts crawling");
         while (true) {
             String crawledURL = "";
@@ -319,7 +307,7 @@ public class Crawler implements Runnable {
             synchronized (Crawler.LOCK_LINKS_QUEUE) {
                 if (!Crawler.linksQueue.isEmpty()) {
                     crawledURL = Crawler.linksQueue.poll();
-                    dequeue_state();
+                    dequeue_state(connection);
                     synchronized (Crawler.LOCK_VISITED_SET) {
                         if (Crawler.visitedLinks.containsKey(crawledURL)) {
                             flagAlreadyVisited = true;
@@ -339,7 +327,7 @@ public class Crawler implements Runnable {
                 try {
                     System.out.println("Time: " + (System.currentTimeMillis() - this.startCrawlingTime)
                             + ", crawling url : " + url);
-                    Document urlContent = save_url_to_db(url.toString(), -1);
+                    Document urlContent = save_url_to_db(connection, url.toString(), -1);
                     if(urlContent != null) {
                         System.out.println(
                                 "_________________________________________________________________________________________");
@@ -366,10 +354,10 @@ public class Crawler implements Runnable {
                             if(breakFlag){
                                 break;
                             }
-                            if (this.isAllowedURL(path)) {
+                            if (this.isAllowedURL(connection, path)) {
                                 synchronized (Crawler.LOCK_LINKS_QUEUE) {
                                     Crawler.linksQueue.add(path);
-                                    enqueue_state(path);
+                                    enqueue_state(connection, path);
                                 }
                             }
                             // end lock
@@ -378,7 +366,7 @@ public class Crawler implements Runnable {
                 } catch (IOException e) {
                     synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
                         Crawler.linksQueue.add(crawledURL);
-                        enqueue_state(crawledURL);
+                        enqueue_state(connection, crawledURL);
                     }
                     System.out.println(
                             "_________________________________________________________________________________________");
@@ -397,7 +385,7 @@ public class Crawler implements Runnable {
     }
 
 
-    public void crawlUpdatedLinks(){
+    public void crawlUpdatedLinks(Connection connection){
         System.out.println("Thread (" + Thread.currentThread().getName() + "): starts crawl updated links");
         while (true) {
             String crawledURL = "";
@@ -406,7 +394,7 @@ public class Crawler implements Runnable {
             synchronized (Crawler.LOCK_LINKS_QUEUE) {
                 if (!Crawler.linksQueue.isEmpty()) {
                     crawledURL = Crawler.linksQueue.poll();
-                    dequeue_state();
+                    dequeue_state(connection);
                     synchronized (Crawler.LOCK_VISITED_SET) {
                         if (Crawler.visitedLinks.containsKey(crawledURL)) {
                             flagVisitedLink = true;
@@ -429,10 +417,11 @@ public class Crawler implements Runnable {
                 try {
                     System.out.println("Time: " + (System.currentTimeMillis() - this.startCrawlingTime)
                             + ", crawling new url in recrawling: " + url);
-                    Document urlContent = save_url_to_db(url.toString(), -1);
+                    Document urlContent = save_url_to_db(connection, url.toString(), -1);
                 } catch (IOException e) {
                     synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
                         Crawler.linksQueue.add(crawledURL);
+                        enqueue_state(connection, crawledURL);
                     }
                     System.out.println(
                             "_________________________________________________________________________________________");
@@ -450,7 +439,7 @@ public class Crawler implements Runnable {
         }
     }
 
-    public Document save_url_to_db(String url, int updateId) throws IOException{
+    public Document save_url_to_db(Connection connection, String url, int updateId) throws IOException{
         Document urlContent = null;
         try {
             urlContent = Jsoup.connect(url.toString()).get();
@@ -462,12 +451,10 @@ public class Crawler implements Runnable {
             else{ // insert
                 query = String.format("INSERT INTO page (url, crawled_time) VALUES ('%s', '%s');", url, Crawler.formatter.format(date));
             }
-            Connection connection = dbManager.getDBConnection();
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate( query, Statement.RETURN_GENERATED_KEYS );
             ResultSet rs = stmt.getGeneratedKeys();
             stmt.close();
-            connection.close();
             rs.beforeFirst();
             rs.next();
             int id = updateId != -1? updateId:rs.getInt(1);
@@ -484,10 +471,9 @@ public class Crawler implements Runnable {
         return urlContent;
     }
 
-    public void delete_from_db(String url, int deleteId) {
+    public void delete_from_db(Connection connection, String url, int deleteId) {
         try {
             String query = String.format("DELETE FROM page WHERE id=%d;", deleteId);
-            Connection connection = dbManager.getDBConnection();
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate(query);
             synchronized (Crawler.LOCK_VISITED_SET) {
@@ -499,10 +485,12 @@ public class Crawler implements Runnable {
     }
 
     public void run() {
-        crawling(); // before recrawling just crawl new websites
+        int threadNumber = Integer.valueOf(Thread.currentThread().getName());
+        Connection connection = Crawler.connections.get(threadNumber);
+        crawling(connection); // before recrawling just crawl new websites
         while(true){
-            recrawling();
-            crawlUpdatedLinks(); // After recrawling, this function crawls new fetched urls in updated websites
+            recrawling(connection);
+            crawlUpdatedLinks(connection); // After recrawling, this function crawls new fetched urls in updated websites
         }
     }
 
@@ -571,13 +559,15 @@ public class Crawler implements Runnable {
             e.printStackTrace();
         }
 
-        int counter = 1;
+        int counter = 0;
         List<Thread> threads = new ArrayList<>();
         Thread t;
-        while (Crawler.numThreads >= counter) {
+        while (Crawler.numThreads > counter) {
             t = new Thread(new Crawler());
             t.setName(String.valueOf(counter++));
             threads.add(t);
+            Connection connection = dbManager.getDBConnection();
+            Crawler.connections.add(connection);
             System.out.println("Thread " + t.getName() + " is created");
         }
 
@@ -607,7 +597,10 @@ public class Crawler implements Runnable {
         for (final Thread thread : threads) {
             try {
                 thread.join();
-            } catch (InterruptedException e) {
+                int threadNumber = Integer.valueOf(Thread.currentThread().getName());
+                Connection connection = Crawler.connections.get(threadNumber);
+                connection.close();
+            } catch (InterruptedException | SQLException e) {
                 System.out.println(
                         "                     ----------------- Error Thread has been interupted -----------------                     ");
             }
