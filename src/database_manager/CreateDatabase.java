@@ -19,7 +19,10 @@ public class CreateDatabase {
             ScriptRunner scriptRunner = new ScriptRunner(con, false, false);
             Reader reader = new BufferedReader(new FileReader(createScriptPath));
             scriptRunner.runScript(reader);
-            Runtime.getRuntime().exec(new String[] { "sh", "-c", "rm -rf ./html_docs/*.html && rm -rf ./src/crawler/Saved_State/*.txt && rm -rf ./txt_docs/*.txt" });
+            Runtime.getRuntime().exec(
+                    new String[] { "sh", "-c",
+                    "rm -rf ./html_docs/*.html && rm -rf ./src/crawler/Saved_State/*.txt && rm -rf ./txt_docs/*.txt"
+            });
 
         } catch (Exception e) {
             System.err.println(e.getMessage());

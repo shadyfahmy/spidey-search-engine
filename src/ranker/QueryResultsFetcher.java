@@ -5,6 +5,7 @@ import database_manager.DatabaseManager;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public class QueryResultsFetcher {
         ArrayList<String> queryWords = new ArrayList<>();
         queryWords.add("about");
         queryWords.add("your");
-        List<Page> queryResults = queryResultsFetcher.getQueryResults(queryWords, 10, 5);
+        List<Page> queryResults = queryResultsFetcher.getQueryResults(queryWords, 0, 5);
         queryResults.forEach(Page::print);
     }
 
@@ -52,7 +53,7 @@ public class QueryResultsFetcher {
         this.dbManager = dbManager;
     }
 
-    public List<Page> getQueryResults(List<String> queryWords, int offset, int maxCount) {
+    public List<Page> getQueryResults(List<String> queryWords, int offset, int limit) {
         try {
             int queryWordsCount = queryWords.size();
 
@@ -67,22 +68,20 @@ public class QueryResultsFetcher {
                     "        (select id as word_id, pages_count as y from word where word = ? " +
                     "           or word = ? ".repeat(queryWordsCount - 1) + ") as t2\n" +
                     "    ) t on t.word_id = w.id\n" +
-                    "    where word = ? " + " or word = ? ".repeat(queryWordsCount - 1) +
                     "    group by page_id\n" +
                     "    order by relevance desc\n" +
                     "    limit ?, ?) r\n" +
                     "join page p on p.id = r.page_id\n" +
                     "order by score desc;";
 
-            PreparedStatement statement = dbManager.getDBConnection().prepareStatement(query);
+            Connection connection = dbManager.getDBConnection();
+            PreparedStatement statement = connection.prepareStatement(query);
 
-            for(int i = 0; i < queryWordsCount; i++) {
+            for(int i = 0; i < queryWordsCount; i++)
                 statement.setString(i + 1, queryWords.get(i));
-                statement.setString(queryWordsCount + i + 1, queryWords.get(i));
-            }
 
-            statement.setInt(queryWordsCount * 2 + 1, offset);
-            statement.setInt(queryWordsCount * 2 + 2, maxCount);
+            statement.setInt(queryWordsCount + 1, offset);
+            statement.setInt(queryWordsCount + 2, limit);
 
             ResultSet result = statement.executeQuery();
 
@@ -94,10 +93,14 @@ public class QueryResultsFetcher {
                         description = result.getString(4),
                         indices = result.getString(5);
                 if(description == null) {
-                    description = getPageSnippets(pageID, getNumericIndices(indices));
+                    description = getPageSnippets(pageID, getNumericIndices(indices, maxSnippets));
                 }
                 queryResults.add(new Page(pageID, url, title, description));
             }
+
+            statement.close();
+            connection.close();
+
             return queryResults;
         }
         catch (Exception ex) {
@@ -107,8 +110,8 @@ public class QueryResultsFetcher {
         }
     }
 
-    private List<Integer> getNumericIndices(String indicesString) {
-        return Arrays.stream(indicesString.split(",")).map(Integer::parseInt).collect(Collectors.toList());
+    private List<Integer> getNumericIndices(String indicesString, int limit) {
+        return Arrays.stream(indicesString.split(",", limit)).map(Integer::parseInt).collect(Collectors.toList());
     }
 
     private String getPageSnippets(int pageID, List<Integer> indices) {
@@ -116,7 +119,7 @@ public class QueryResultsFetcher {
             String content = Files.readString(Path.of(text_docs_dir + pageID + ".txt"));
             List<String> words = Arrays.asList(content.split("\\s"));
             StringBuilder snippets = new StringBuilder();
-            for (Integer index : indices.subList(0, Math.min(maxSnippets, indices.size()))) {
+            for (Integer index : indices) {
                 snippets.append(
                         String.join(" ", words.subList(
                                 Math.max(0, index - 4), Math.min(words.size(), index + 4)

@@ -25,18 +25,13 @@
     <show-object-properties value="true" />
     <loaded-nodes>
       <connection connection-id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-        <schema name="information_schema" object-types="column, table, view" />
-        <schema name="mysql" object-types="function, table, view" />
-        <schema name="test_search_engine" object-types="procedure, function, dataset trigger, column, table, view, constraint" />
+        <schema name="test_search_engine" object-types="constraint, index, procedure, dataset trigger, view, column, table, function" />
       </connection>
     </loaded-nodes>
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-      <console name="MySQL Connection 1" type="STANDARD" schema="mysql" session="Main"><![CDATA[select update_time
-from information_schema.TABLES
-where table_schema = 'test_search_engine' and table_name = 'page']]></console>
-      <console name="MySQL Connection 2" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select p.id, p.url, p.title, p.description, indices, relevance * page_rank as score from
+      <console name="MySQL Connection" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select p.id, p.url, p.title, p.description, indices, relevance * page_rank as score from
     (select page_id, group_concat(indices) as indices, SUM((1 + log(count)) * idf + important) as relevance
     from page p
     join word_index wi on wi.page_id = p.id
@@ -46,29 +41,109 @@ where table_schema = 'test_search_engine' and table_name = 'page']]></console>
         (select count(id) as x from page) as t1, 
         (select id as word_id, pages_count as y from word where word ='about' or word = 'your') as t2
     ) t on t.word_id = w.id
-    where word = 'about' or word = 'your'
     group by page_id
     order by relevance desc
     limit 1, 5) r
 join page p on p.id = r.page_id
 order by score desc;
 
+select word_id, log(1 + (x / y)) as idf from 
+        (select count(id) as x from page) as t1, 
+        (select id as word_id, pages_count as y from word where word ='about' or word = 'your') 
+        as t2
+select w.id as word_id, pages_count, count(distinct p.id)
+from word w, page p
+where word ='about' or word = 'your'
+group by w.id, pages_count
 
-select p.url, p.title, p.description, relevance * page_rank as score from     (select page_id, SUM((1 + log(count)) * idf + important) as relevance     from page p     join word_index wi on wi.page_id = p.id     join word w on wi.word_id = w.id     join (         select word_id, log(1 + (x / y)) as idf from         (select count(id) as x from page) as t1,         (select id as word_id, pages_count as y from word where word = 'about'            or word = 'your' ) as t2     ) t on t.word_id = w.id     where word = 'about'  or word = 'your'     group by page_id     order by relevance desc     limit 100) r join page p on p.id = r.page_id order by score desc
+drop table test;
 
-select page_id, group_concat(indices) as indices, SUM((1 + log(count)) * idf + important) as relevance
-from page p
-join word_index wi on wi.page_id = p.id
-join word w on wi.word_id = w.id
-join (
-    select word_id, log(1 + (x / y)) as idf from 
-    (select count(id) as x from page) as t1, 
-    (select id as word_id, pages_count as y from word where word ='about' or word = 'your') as t2
-) t on t.word_id = w.id
-where word = 'about' or word = 'your'
-group by page_id
-order by relevance desc
-limit 100]]></console>
+create table test (
+    word varchar(500) not null,
+	word_id bigint unsigned,
+	page_id bigint unsigned,
+	i int,
+	primary key (word_id, page_id, i)
+);
+
+delete from test;
+
+insert ignore into test values
+('german', 1, 2, 3),
+('german', 1, 2, 10),
+('german', 1, 3, 1),
+('german', 1, 4, 30),
+('german', 1, 5, 31),
+('german', 1, 5, 32),
+('shepherd', 2, 2, 11),
+('shepherd', 2, 2, 2),
+('shepherd', 2, 2, 4),
+('shepherd', 2, 4, 32),
+('shepherd', 2, 5, 33),
+('hi', 3, 2, 5),
+('bye', 4, 3, 20),
+('tri', 5, 4, 11),
+('shangahai', 6, 5, 16),
+('kill', 7, 4, 1),
+('me', 8, 4, 2),
+('now', 9, 4, 3);
+
+select t1.page_id, count(t1.page_id) as count
+from test t1
+join test t2 on t1.page_id = t2.page_id
+join test t3 on t1.page_id = t3.page_id
+where (t1.word = 'kill' and t2.word = 'me' and t3.word = 'now'
+        and t2.i - t1.i = 1 and t3.i - t2.i = 1)
+group by t1.page_id
+
+select page_id, log(1 + (phrase_count/phrase_count)) * tf as relevance from
+    (select count(*) as phrase_count from 
+        (select t1.page_id, 1 + log(count(*)) as tf
+            from test t1
+            join test t2 on t1.page_id = t2.page_id
+            join test t3 on t1.page_id = t3.page_id
+            where (t1.word = 'kill' and t2.word = 'me' and t3.word = 'now'
+                    and t2.i - t1.i = 1 and t3.i - t2.i = 1)
+            group by t1.page_id) t
+    ) t1,
+    (select t1.page_id, 1 + log(count(*)) as tf
+        from test t1
+        join test t2 on t1.page_id = t2.page_id
+        join test t3 on t1.page_id = t3.page_id
+        where (t1.word = 'kill' and t2.word = 'me' and t3.word = 'now'
+                and t2.i - t1.i = 1 and t3.i - t2.i = 1)
+        group by t1.page_id
+    ) t2,
+    (select count(*) as pages_count from page) t3
+
+union
+
+select page_id, log(1 + (phrase_count/phrase_count)) * tf as relevance, indices from
+    (select count(*) as phrase_count from 
+        (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.i) as indices
+                from test t1
+                join test t2 on t1.page_id = t2.page_id
+                where (t1.word = 'german' and t2.word = 'shepherd'
+                        and t2.i - t1.i = 1)
+                group by t1.page_id) t
+    ) t1,
+    (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.i) as indices
+                from test t1
+                join test t2 on t1.page_id = t2.page_id
+                where (t1.word = 'german' and t2.word = 'shepherd'
+                        and t2.i - t1.i = 1)
+                group by t1.page_id
+    ) t2,
+    (select count(*) as pages_count from page) t3
+
+select * from test
+
+select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.i) as indices
+from test t1
+join test t2 on t1.page_id = t2.page_id
+where (t1.word = 'german' and t2.word = 'shepherd'
+        and t2.i - t1.i = 1)
+group by t1.page_id]]></console>
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
