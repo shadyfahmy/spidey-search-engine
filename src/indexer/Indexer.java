@@ -1,6 +1,4 @@
 package indexer;
-import de.jkeylockmanager.manager.KeyLockManager;
-import de.jkeylockmanager.manager.KeyLockManagers;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -32,8 +30,8 @@ public class Indexer implements Runnable{
 	private static HashMap <Integer, Integer> pagesState = new HashMap<>();
 	private static HashMap <String, Integer> pageURLToID = new HashMap<>();
 	public enum States { SKIP, CRAWL, RECRAWL};
+	private static int countIndexed;
 	private static List<Connection> connections = new ArrayList<>();
-	private static  final KeyLockManager lockManager = KeyLockManagers.newLock();
 
 	public Indexer(DatabaseManager dbManager) {
 		this.dbManager = dbManager;
@@ -329,17 +327,14 @@ public class Indexer implements Runnable{
 
 						}
 						connection.commit();
+						if (!recrawl) {
+							countIndexed++;
+							System.out.println("Indexed: " + countIndexed + "/" + (pagesCount-1));
+						}
 					}
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
-
-
-
-
-
-			//String  printWords = Arrays.toString(wordsList.toArray());
-			//System.out.println(printWords);
 
 
 		}
@@ -355,6 +350,7 @@ public class Indexer implements Runnable{
 
 	public static void main(String args[]) throws IOException
 	{
+		countIndexed = 0;
 		long start = System.currentTimeMillis();
 		dbManager = new DatabaseManager();
 		Connection initialConnection = dbManager.getDBConnection();
