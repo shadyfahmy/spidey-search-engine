@@ -1,1 +1,1 @@
-rm -rf ./html_docs/*.html && rm -rf ./src/crawler/Saved_State/*.txt
+rm -rf ./html_docs/*.html && rm -rf ./src/crawler/Saved_State/*.txt && rm -rf ./txt_docs/*.txt

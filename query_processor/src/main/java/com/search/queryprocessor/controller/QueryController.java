@@ -6,6 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
+import java.util.List;
+
 @RestController
 @CrossOrigin("*")
 public class QueryController {
@@ -21,4 +24,15 @@ public class QueryController {
         repository.save(query);
     }
 
+    /*
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.GET, value = "/api/v1/paging")
+    public List<Query> getPage() {
+        return Arrays.asList(
+                new Query("test1"),
+                new Query("test2"),
+                new Query("test3")
+        );
+    }
+    */
 }
