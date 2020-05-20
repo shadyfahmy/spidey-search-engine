@@ -7,8 +7,8 @@ import { HomeComponent } from './home/home.component';
 
 const routes: Routes = [
   { path: '', component: HomeComponent },
-  { path: 'search', component: ResultsPageComponent }
-
+  { path: 'search/:query/:im', component: ResultsPageComponent },
+  { path: '**', component: HomeComponent },
 
 ];
 

@@ -1,22 +1,31 @@
-<div id="maincontainer">
+<div id="maincontainer" [ngStyle]="{'background-color': night ? '#141d26' : nochange}">
     <img src="../../assets/logo.png" id="img">
 
     <form id="formfield">
         <input type="text"
         placeholder=""
+        (input)="Suggestions($event.target.value)"
         id="searchbox"
         [(ngModel)] = "value"
         [formControl]="control"
         [matAutocomplete]="auto">
         <mat-autocomplete #auto="matAutocomplete">
-        <mat-option *ngFor="let street of filteredStreets | async" [value]="street">
-        {{street}}
+        <mat-option *ngFor="let sug of suggestionsTxt" [value]="sug">
+        {{sug}}
         </mat-option>
         </mat-autocomplete>
         <button mat-button *ngIf="value" matSuffix mat-icon-button aria-label="Clear" (click)="value=''">
             <mat-icon>close</mat-icon>
         </button>
+        <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="listen()">
+            <mat-icon [ngStyle]="{'color': listening ? 'red' : nochange}">mic</mat-icon>
+        </button>
     </form>
 
-    <button mat-raised-button color="secondry" id="btn">Search</button>
+    <button mat-raised-button color="primary" id="btn" (click)='search()'>Search</button>
+    <button mat-raised-button color="primary" id="btn" (click)='imSearch()'>Images</button>
+    <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="nightMode()" id="night">
+        <mat-icon [ngStyle]="{'color': night ? nochange : 'white'}">brightness_3</mat-icon>
+    </button>
+
 </div>

@@ -91,7 +91,7 @@ input:focus {
     height: 60px;
     /*f5f5f5*/
     /*background-color: rgb(214, 214, 214);*/
-    background-color: rgb(23, 102, 167);
+    background-color: rgb(45, 80, 160);
     box-shadow: 2px 1px 2px 2px rgba(0, 0, 0, 0.2), 2px 1px 2px 2px rgba(0, 0, 0, 0.19);
 }
 
@@ -102,7 +102,7 @@ input:focus {
     height: 60px;
     /*f5f5f5*/
     /*background-color: rgb(214, 214, 214);*/
-    background-color: rgb(23, 102, 167);
+    background-color: rgb(45, 80, 160);
     color: white;
 
     width: fit-content;
@@ -134,5 +134,9 @@ input:focus {
     margin-left: 95%;
     margin-top: 70px;
     position:absolute;
-    background-color:  #3F51d8;
+    background-color: rgb(45, 80, 160);
+}
+#night:hover{
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+
 }

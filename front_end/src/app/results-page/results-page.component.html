@@ -8,8 +8,8 @@
         [formControl]="control"
         [matAutocomplete]="auto">
         <mat-autocomplete #auto="matAutocomplete">
-        <mat-option *ngFor="let street of streets" [value]="street">
-        {{street.text}}
+        <mat-option *ngFor="let sug of suggestionsTxt" [value]="sug">
+        {{sug}}
         </mat-option>
         </mat-autocomplete>
         <button mat-button *ngIf="value" matSuffix mat-icon-button aria-label="Clear" (click)="value=''">
@@ -26,7 +26,7 @@
         </button>
 
     </form>
-    <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="night = !night" id="night">
+    <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="nightMode()" id="night">
         <mat-icon [ngStyle]="{'color': night ? nochange : 'white'}">brightness_3</mat-icon>
     </button>
 </mat-toolbar>
