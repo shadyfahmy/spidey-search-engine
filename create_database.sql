@@ -19,6 +19,14 @@ create table page (
 	primary key (id)
 );
 
+drop table if exists state;
+
+create table state (
+	id serial,
+	url text not null,
+	primary key (id)
+);
+
 drop table if exists page_connections;
 
 create table page_connections (

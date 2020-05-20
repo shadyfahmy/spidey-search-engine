@@ -39,14 +39,11 @@ public class Crawler implements Runnable {
     public static final int MAX_WEBSITES = 5000;
     private final long startCrawlingTime = System.currentTimeMillis();
     private static final int numThreads = 10;
-    public static final String linksQueueFileName = "./src/crawler/Saved_State/LinksQueue.txt";
     public static final String seedSetFileName = "./src/crawler/SeedSet.txt";
     public static final String outputFolderBase = "./html_docs/";
 
     public static final DatabaseManager dbManager = new DatabaseManager();
     public static final SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
-
-    public static BufferedWriter linksQueueWriter;
 
     public static final Object LOCK_LINKS_QUEUE = new Object();
     public static final Object LOCK_LINKS_QUEUE_WRITER = new Object();
@@ -57,6 +54,49 @@ public class Crawler implements Runnable {
     private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();
 
     public Crawler() {
+    }
+
+    private void dequeue_state() {
+        try {
+            String query = String.format("DELETE FROM state LIMIT 1;");
+            Connection connection = dbManager.getDBConnection();
+            Statement stmt = connection.createStatement();
+            int rowsAffected = stmt.executeUpdate(query);
+            if(rowsAffected == 1){
+                System.out.println("dequeue_state successfully");
+            } else {
+                System.out.println("dequeue_state failed");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void enqueue_state(String url) {
+        try {
+            String query = String.format("INSERT INTO state (url) VALUES ('%s');", url);
+            Connection connection = dbManager.getDBConnection();
+            Statement stmt = connection.createStatement();
+            int rowsAffected = stmt.executeUpdate(query);
+            if(rowsAffected == 1){
+                System.out.println("Enqueued_state successfully");
+            } else {
+                System.out.println("Enqueued_state failed");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void clear_state() {
+        try {
+            String query = String.format("DELETE * FROM state;");
+            Connection connection = dbManager.getDBConnection();
+            Statement stmt = connection.createStatement();
+            int rowsAffected = stmt.executeUpdate(query);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     private Boolean isAllowedURL(String url) {
@@ -163,6 +203,7 @@ public class Crawler implements Runnable {
             if (Crawler.recrawlingQueue.isEmpty()) {
                 synchronized (Crawler.LOCK_LINKS_QUEUE) {
                     Crawler.linksQueue.clear(); // clear in the start to make sure nothing there
+                    clear_state();
                 }
                 synchronized (Crawler.LOCK_VISITED_SET) {
                     Crawler.visitedLinks.entrySet().forEach(entry -> {
@@ -223,19 +264,9 @@ public class Crawler implements Runnable {
                                 if (this.isAllowedURL(path)) {
                                     synchronized (Crawler.LOCK_LINKS_QUEUE) {
                                         Crawler.linksQueue.add(path);
+                                        enqueue_state(path);
                                     }
                                 }
-                            }
-
-                            // save to saved state
-                            synchronized (Crawler.LOCK_LINKS_QUEUE_WRITER) {
-                                Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
-                                synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                    for (final String urlStr : Crawler.linksQueue) {
-                                        Crawler.linksQueueWriter.write(urlStr + '\n');
-                                    }
-                                }
-                                Crawler.linksQueueWriter.close();
                             }
                         } else {
                             // delete from db
@@ -288,6 +319,7 @@ public class Crawler implements Runnable {
             synchronized (Crawler.LOCK_LINKS_QUEUE) {
                 if (!Crawler.linksQueue.isEmpty()) {
                     crawledURL = Crawler.linksQueue.poll();
+                    dequeue_state();
                     synchronized (Crawler.LOCK_VISITED_SET) {
                         if (Crawler.visitedLinks.containsKey(crawledURL)) {
                             flagAlreadyVisited = true;
@@ -316,7 +348,6 @@ public class Crawler implements Runnable {
                         System.out.println(
                                 "_________________________________________________________________________________________");
                         // end lock
-                        boolean queueUpdated = false;
                         final Elements linksFound = urlContent.select("a[href]");
                         for (final Element link : linksFound) {
                             final String urlText = link.attr("abs:href");
@@ -338,28 +369,16 @@ public class Crawler implements Runnable {
                             if (this.isAllowedURL(path)) {
                                 synchronized (Crawler.LOCK_LINKS_QUEUE) {
                                     Crawler.linksQueue.add(path);
+                                    enqueue_state(path);
                                 }
-                                queueUpdated = true;
                             }
                             // end lock
-                        }
-
-                        // save to saved state
-                        if(queueUpdated) {
-                            synchronized (Crawler.LOCK_LINKS_QUEUE_WRITER) {
-                                Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
-                                synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                    for (final String urlStr : Crawler.linksQueue) {
-                                        Crawler.linksQueueWriter.write(urlStr + '\n');
-                                    }
-                                }
-                                Crawler.linksQueueWriter.close();
-                            }
                         }
                     }
                 } catch (IOException e) {
                     synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
                         Crawler.linksQueue.add(crawledURL);
+                        enqueue_state(crawledURL);
                     }
                     System.out.println(
                             "_________________________________________________________________________________________");
@@ -387,6 +406,7 @@ public class Crawler implements Runnable {
             synchronized (Crawler.LOCK_LINKS_QUEUE) {
                 if (!Crawler.linksQueue.isEmpty()) {
                     crawledURL = Crawler.linksQueue.poll();
+                    dequeue_state();
                     synchronized (Crawler.LOCK_VISITED_SET) {
                         if (Crawler.visitedLinks.containsKey(crawledURL)) {
                             flagVisitedLink = true;
@@ -490,7 +510,6 @@ public class Crawler implements Runnable {
         Crawler.formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
         boolean isRecrawling = false;
         try {
-            Date date = new Date(System.currentTimeMillis());
             String query = String.format("SELECT * FROM page;");
             Connection connection = dbManager.getDBConnection();
             Statement statement = connection.createStatement();
@@ -508,12 +527,19 @@ public class Crawler implements Runnable {
             connection.close();
             // check if in recrawling mode first // if yes don't load queue list
             isRecrawling = (Crawler.visitedLinks.size() >= Crawler.MAX_WEBSITES);
-            File urlsFile = new File(Crawler.linksQueueFileName);
             if(!isRecrawling) {
-                Scanner sc = new Scanner(urlsFile);
-                while (sc.hasNextLine()) {
-                    Crawler.linksQueue.add(sc.nextLine());
+                query = String.format("SELECT * FROM state;");
+                connection = dbManager.getDBConnection();
+                statement = connection.createStatement();
+                result = statement.executeQuery(query);
+                System.out.println(result);
+                while (result.next()) {
+                    String url = result.getString("url");
+                    Crawler.linksQueue.add(url);
                 }
+                result.close();
+                statement.close();
+                connection.close();
                 if (Crawler.linksQueue.isEmpty()) {
                     System.out.println("QUEUE EMPTY!!");
                     File seedSetFile = new File(Crawler.seedSetFileName);
@@ -547,13 +573,6 @@ public class Crawler implements Runnable {
 
         int counter = 1;
         List<Thread> threads = new ArrayList<>();
-        try {
-            Crawler.linksQueueWriter = new BufferedWriter(new FileWriter(Crawler.linksQueueFileName));
-        } catch (IOException e) {
-            System.out.println("                     ----------------- Error IO-Exception Can not open ("
-                    + Crawler.linksQueueFileName + ") Exit program -----------------                     ");
-            System.exit(0);
-        }
         Thread t;
         while (Crawler.numThreads >= counter) {
             t = new Thread(new Crawler());
