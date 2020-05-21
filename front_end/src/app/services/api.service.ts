@@ -7,7 +7,7 @@ import { map } from 'rxjs/operators';
 @Injectable({
   providedIn: 'root'
 })
-export class ResultsService {
+export class ApiService {
 
   private baseUrl = "http://localhost:8080/api/v1"
   constructor(private httpClient: HttpClient) { }
@@ -35,6 +35,20 @@ export class ResultsService {
 
     return this.httpClient.get<any>(this.baseUrl + "/queries/search/suggestions?text="+text+"&size=5"
     , {headers: header})
+  }
+
+  addUser() {
+    let header = new HttpHeaders();
+    header.set('Access-Control-Allow-Origin', '*');
+    header.set('withcredentials', 'true');
+    return this.httpClient.post(this.baseUrl + "/add-user", {headers: header})
+  }
+
+  addHistory(user_id, url_id) {
+    let header = new HttpHeaders();
+    header.set('Access-Control-Allow-Origin', '*');
+    header.set('withcredentials', 'true');
+    return this.httpClient.post(this.baseUrl + "/history",{"user": user_id, "url": url_id }, {headers: header})
   }
   
 }

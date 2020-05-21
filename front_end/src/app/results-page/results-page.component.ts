@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { startWith, map } from 'rxjs/operators';
 import { Result } from '../common/result';
 import { Routes, RouterModule, Router, ActivatedRoute } from '@angular/router';
-import { ResultsService } from '../services/results.service';
+import { ApiService } from '../services/api.service';
 import {
   RxSpeechRecognitionService,
   resultList,
@@ -30,7 +30,7 @@ export class ResultsPageComponent implements OnInit {
   imageSearch = false;
   recognition = new SpeechRecognition
 
-  constructor(private resultsService: ResultsService,
+  constructor(private apiService: ApiService,
       public service: RxSpeechRecognitionService,
       private route: ActivatedRoute,
       private router: Router) {
@@ -60,12 +60,18 @@ export class ResultsPageComponent implements OnInit {
   ngOnInit() {
     this.loading = true;
 
+    //localStorage.removeItem('id')
+
     let user = localStorage.getItem('id')
-    if (user != null)
+    if (user != null) {
       console.log("data from local storage = " + user)
+    }
     else{
-      localStorage.setItem('id', "1")
-      console.log("data saved to local storage = " +  localStorage.getItem('id'))
+      this.apiService.addUser().subscribe(data => {
+        console.log(data);
+        localStorage.setItem('id', data.id)
+        console.log("data saved to local storage = " +  localStorage.getItem('id'))
+      });
     }
 
     let nm = localStorage.getItem('nightMode')
@@ -91,7 +97,7 @@ export class ResultsPageComponent implements OnInit {
 
     this.suggestions = null;
 
-    this.resultsService.getResults().subscribe(data => {
+    this.apiService.getResults().subscribe(data => {
       this.results = null
       if(data){
         console.log(data.page);
@@ -105,7 +111,7 @@ export class ResultsPageComponent implements OnInit {
   Search() {
     if(this.value.replace(/\s/g, '') != ""){
       this.imageSearch = false;
-      this.resultsService.saveQuery(this.value).subscribe(data => {
+      this.apiService.saveQuery(this.value).subscribe(data => {
       });
       this.router.navigate(['search', this.value, "false"])
     }
@@ -114,14 +120,14 @@ export class ResultsPageComponent implements OnInit {
   ImageSearch() {
     if(this.value.replace(/\s/g, '') != ""){
       this.imageSearch = true;
-      this.resultsService.saveQuery(this.value).subscribe(data => {
+      this.apiService.saveQuery(this.value).subscribe(data => {
       });
       this.router.navigate(['search', this.value, "true"])
     }
   }
 
   Suggestions(text : string) {
-    this.resultsService.getSuggestions(text).subscribe(data => {
+    this.apiService.getSuggestions(text).subscribe(data => {
       this.suggestions = data._embedded.queries;
       this.suggestionsTxt = []
       for(let s of this.suggestions) {
@@ -160,6 +166,11 @@ export class ResultsPageComponent implements OnInit {
       localStorage.setItem('nightMode', "true")
     else
       localStorage.setItem('nightMode', "false")
+  }
+
+  history(url_id) {
+    this.apiService.addHistory(localStorage.getItem('id'), url_id).subscribe(data => {
+    })
   }
 
 }
