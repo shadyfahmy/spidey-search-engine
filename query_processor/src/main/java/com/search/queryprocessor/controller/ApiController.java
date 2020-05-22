@@ -56,10 +56,21 @@ public class ApiController {
     //Add to history of a user
     @RequestMapping(method = RequestMethod.POST, value = "/api/v1/history")
     public void addHistory(@RequestBody History history) {
-        String q = "INSERT INTO search.history (user, url) VALUES ("+String.valueOf(history.getUser())+
+        String q = "INSERT IGNORE INTO search.history (user, url) VALUES ("+String.valueOf(history.getUser())+
                 ","+String.valueOf(history.getUrl())+");";
         System.out.println(q);
         jdbcTemplate.execute(q);
+
+        int times = jdbcTemplate.queryForObject("select times from search.history where (user ="+
+                        String.valueOf(history.getUser())+") and (url =" +String.valueOf(history.getUrl())+")",
+                (us, RN) -> us.getInt("times"));
+        times++;
+
+        String q1 =  "UPDATE search.history SET times = "+String.valueOf(times)+"  WHERE (user ="+String.valueOf(history.getUser())+
+                ") and (url ="+String.valueOf(history.getUrl())+");";
+        System.out.println(q1);
+        jdbcTemplate.execute(q1);
+
     }
 
 }
