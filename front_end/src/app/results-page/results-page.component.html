@@ -60,8 +60,12 @@
 </div>
 
 <div id="footer">
-    <mat-paginator id="pg"
-        [length]="100"
-        [pageSize]="10">
-    </mat-paginator>
+    <button mat-button  matSuffix mat-icon-button aria-label="Clear"
+    [disabled]="page == 1" (click)="prevPage()">
+        <mat-icon [ngStyle]="{'color': page >= 2 ? 'white' : 'gray'}">keyboard_arrow_left</mat-icon>
+    </button>
+    <span>Page : {{page}}</span>
+    <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="nextPage()">
+        <mat-icon [ngStyle]="{'color': night ? nochange : 'white'}">keyboard_arrow_right</mat-icon>
+    </button>
 </div>

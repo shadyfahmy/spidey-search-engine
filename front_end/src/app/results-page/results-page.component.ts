@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
+import {PageEvent} from '@angular/material/paginator';
 import { Observable } from 'rxjs';
 import { startWith, map } from 'rxjs/operators';
 import { Result } from '../common/result';
@@ -28,6 +29,7 @@ export class ResultsPageComponent implements OnInit {
   listening = false;
   loading = true;
   imageSearch = false;
+  page: number;
   recognition = new SpeechRecognition
 
   constructor(private apiService: ApiService,
@@ -36,6 +38,7 @@ export class ResultsPageComponent implements OnInit {
       private router: Router) {
 
       this.route.params.subscribe( params => {this.value = params.query;
+      this.page = parseInt(params.page);
       if(params.im == "true")
         this.imageSearch = true;
       else
@@ -113,7 +116,7 @@ export class ResultsPageComponent implements OnInit {
       this.imageSearch = false;
       this.apiService.saveQuery(this.value).subscribe(data => {
       });
-      this.router.navigate(['search', this.value, "false"])
+      this.router.navigate(['search', this.value, "false", 0])
     }
   }
 
@@ -122,7 +125,7 @@ export class ResultsPageComponent implements OnInit {
       this.imageSearch = true;
       this.apiService.saveQuery(this.value).subscribe(data => {
       });
-      this.router.navigate(['search', this.value, "true"])
+      this.router.navigate(['search', this.value, "true", 0])
     }
   }
 
@@ -173,4 +176,27 @@ export class ResultsPageComponent implements OnInit {
     })
   }
 
+  nextPage() {
+    this.page = this.page + 1;
+    if(this.imageSearch) {
+      this.router.navigate(['search', this.value, "true", this.page])
+    }
+    else{
+      this.router.navigate(['search', this.value, "false", this.page])
+
+    }
+  }
+  
+  prevPage() {
+    if(this.page >=2 ) {
+    this.page = this.page - 1;
+    if(this.imageSearch) {
+      this.router.navigate(['search', this.value, "true", this.page])
+    }
+    else{
+      this.router.navigate(['search', this.value, "false", this.page])
+
+    }
+  }
+}
 }
