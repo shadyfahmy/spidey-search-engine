@@ -1,5 +1,8 @@
 <div id="maincontainer" [ngStyle]="{'background-color': night ? '#141d26' : nochange}">
-    <img src="../../assets/logo.png" id="img">
+    <span id="name" [ngStyle]="{'color': night ? 'white' : 'black'}">Spidey</span>
+    <img *ngIf="night" src="../../assets/spidey2.png" id="img">
+    <img *ngIf="!night" src="../../assets/spidey.png" id="img">
+
 
     <form id="formfield">
         <input type="text"

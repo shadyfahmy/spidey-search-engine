@@ -83,7 +83,7 @@ export class HomeComponent implements OnInit {
     if(this.value.replace(/\s/g, '') != ""){
       this.apiService.saveQuery(this.value).subscribe(data => {
       });
-      this.router.navigate(['search', this.value, "false", 0])
+      this.router.navigate(['search', this.value, "false", 1])
     }
   }
 
@@ -91,7 +91,7 @@ export class HomeComponent implements OnInit {
     if(this.value.replace(/\s/g, '') != ""){
       this.apiService.saveQuery(this.value).subscribe(data => {
       });
-      this.router.navigate(['search', this.value, "true", 0])
+      this.router.navigate(['search', this.value, "true", 1])
     }  
   }
 
