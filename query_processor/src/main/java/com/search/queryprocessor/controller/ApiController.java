@@ -4,12 +4,15 @@ import com.search.queryprocessor.entity.History;
 import com.search.queryprocessor.entity.Query;
 import com.search.queryprocessor.entity.User;
 import com.search.queryprocessor.repository.QueryRepository;
+import com.search.queryprocessor.utils.Stemmer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
+import org.tartarus.snowball.ext.EnglishStemmer;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -18,6 +21,7 @@ import java.util.List;
 public class ApiController {
 
     private final QueryRepository repository;
+    Stemmer stemmer = new Stemmer();
 
     @Autowired
     JdbcTemplate jdbcTemplate;
@@ -71,6 +75,35 @@ public class ApiController {
         System.out.println(q1);
         jdbcTemplate.execute(q1);
 
+    }
+
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.GET, value = "/api/v1/get-results")
+    public int getResults(@RequestParam(name = "text") String text, @RequestParam(name = "user") int user ) {
+        System.out.println(text);
+        ArrayList<String> impWords = new ArrayList<String>();
+
+        impWords = stemmer.getStemmedWords(text);
+
+        for (int i = 0; i < impWords.size(); i++) {
+            System.out.println(impWords.get(i));
+        }
+        return user;
+    }
+
+    @ResponseBody
+    @RequestMapping(method = RequestMethod.GET, value = "/api/v1/get-images")
+    public int getImages(@RequestParam(name = "text") String text, @RequestParam(name = "user") int user ) {
+        System.out.println(text);
+        ArrayList<String> impWords = new ArrayList<String>();
+
+        impWords = stemmer.getStemmedWords(text);
+
+        for (int i = 0; i < impWords.size(); i++) {
+            System.out.println(impWords.get(i));
+        }
+
+        return user;
     }
 
 }
