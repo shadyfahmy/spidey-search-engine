@@ -58,3 +58,26 @@ create table word_index (
 	foreign key (page_id) references page(id) on delete cascade on update cascade,
 	foreign key (word_id) references word(id) on delete cascade on update cascade
 );
+
+drop table if exists users;
+
+CREATE TABLE users (
+   id int NOT NULL AUTO_INCREMENT,
+   PRIMARY KEY (id)
+);
+
+drop table if exists history;
+
+CREATE TABLE history (
+   user int NOT NULL,
+   url int NOT NULL,
+   times int NOT NULL DEFAULT '0',
+   PRIMARY KEY (user,url)
+);
+
+drop table if exists queries;
+
+CREATE TABLE queries (
+   text varchar(500) NOT NULL,
+   PRIMARY KEY (text)
+);
