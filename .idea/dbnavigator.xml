@@ -25,13 +25,13 @@
     <show-object-properties value="true" />
     <loaded-nodes>
       <connection connection-id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-        <schema name="test_search_engine" object-types="constraint, index, procedure, dataset trigger, view, column, table, function" />
+        <schema name="test_search_engine" object-types="table, view, function, column" />
       </connection>
     </loaded-nodes>
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-      <console name="MySQL Connection" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select p.id, p.url, p.title, p.description, indices, relevance * page_rank as score from
+      <console name="MySQL Connection" type="STANDARD" schema="test_search_engine" session="Main">select p.id, p.url, p.title, p.description, indices, relevance * page_rank as score from
     (select page_id, group_concat(indices) as indices, SUM((1 + log(count)) * idf + important) as relevance
     from page p
     join word_index wi on wi.page_id = p.id
@@ -86,7 +86,10 @@ insert ignore into test values
 ('shangahai', 6, 5, 16),
 ('kill', 7, 4, 1),
 ('me', 8, 4, 2),
-('now', 9, 4, 3);
+('now', 9, 4, 3),
+('kill', 7, 5, 1),
+('me', 8, 5, 2),
+('now', 9, 5, 3);
 
 select t1.page_id, count(t1.page_id) as count
 from test t1
@@ -96,9 +99,12 @@ where (t1.word = 'kill' and t2.word = 'me' and t3.word = 'now'
         and t2.i - t1.i = 1 and t3.i - t2.i = 1)
 group by t1.page_id
 
-select page_id, log(1 + (phrase_count/phrase_count)) * tf as relevance from
+
+select page_id, sum(relevance), group_concat(indices) from
+(
+select page_id, log(1 + (phrase_count/phrase_count)) * tf as relevance, indices from
     (select count(*) as phrase_count from 
-        (select t1.page_id, 1 + log(count(*)) as tf
+        (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.i) as indices
             from test t1
             join test t2 on t1.page_id = t2.page_id
             join test t3 on t1.page_id = t3.page_id
@@ -106,7 +112,7 @@ select page_id, log(1 + (phrase_count/phrase_count)) * tf as relevance from
                     and t2.i - t1.i = 1 and t3.i - t2.i = 1)
             group by t1.page_id) t
     ) t1,
-    (select t1.page_id, 1 + log(count(*)) as tf
+    (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.i) as indices
         from test t1
         join test t2 on t1.page_id = t2.page_id
         join test t3 on t1.page_id = t3.page_id
@@ -135,15 +141,8 @@ select page_id, log(1 + (phrase_count/phrase_count)) * tf as relevance, indices 
                 group by t1.page_id
     ) t2,
     (select count(*) as pages_count from page) t3
-
-select * from test
-
-select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.i) as indices
-from test t1
-join test t2 on t1.page_id = t2.page_id
-where (t1.word = 'german' and t2.word = 'shepherd'
-        and t2.i - t1.i = 1)
-group by t1.page_id]]></console>
+) t
+group by page_id</console>
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">

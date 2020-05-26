@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/SearchEngine.iml" filepath="$PROJECT_DIR$/.idea/SearchEngine.iml" />
+      <module fileurl="file://$PROJECT_DIR$/query_processor/queryprocessor.iml" filepath="$PROJECT_DIR$/query_processor/queryprocessor.iml" />
     </modules>
   </component>
 </project>
