@@ -1,5 +1,5 @@
 #searchbox{
-    width: 500px;
+    width: 70%;
     height: 30px;
     font-size: 16pt;
     border-style: none;
@@ -24,8 +24,8 @@
     
 #formfield{
     height: 34px;
-    width: 700px;
-    margin-left: 150px;
+    width: 53%;
+    margin-left: 10px;
     text-align: left;
     background-color: white;
     border-style: solid;
@@ -41,8 +41,8 @@ input:focus {
 
 #resultsContainer{
     /*border-style: solid;*/
-    width: 50%;
-    margin-left: 150px;
+    width: 55%;
+    margin-left: 160px;
     margin-top: 30px;
     padding-top: 50px;
     z-index: -1;
@@ -89,23 +89,12 @@ input:focus {
 
 #footer{
     height: 60px;
-    /*f5f5f5*/
-    /*background-color: rgb(214, 214, 214);*/
-    background-color: rgb(45, 80, 160);
-    box-shadow: 2px 1px 2px 2px rgba(0, 0, 0, 0.2), 2px 1px 2px 2px rgba(0, 0, 0, 0.19);
-}
-
-#pg{
-    text-align: center;
-    margin-left: auto;
-    margin-right: auto;
-    height: 60px;
-    /*f5f5f5*/
-    /*background-color: rgb(214, 214, 214);*/
-    background-color: rgb(45, 80, 160);
+    padding-top: 12px;
+    //text-align: center;
     color: white;
-
-    width: fit-content;
+    //background-color: rgb(45, 80, 160);
+    background-color: rgb(23, 102, 167);
+    box-shadow: 2px 1px 2px 2px rgba(0, 0, 0, 0.2), 2px 1px 2px 2px rgba(0, 0, 0, 0.19);
 }
 
 #spinner {
@@ -134,9 +123,27 @@ input:focus {
     margin-left: 95%;
     margin-top: 70px;
     position:absolute;
-    background-color: rgb(45, 80, 160);
+    //background-color: rgb(45, 80, 160);
+    background-color: rgb(23, 102, 167);
 }
 #night:hover{
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+
+}
+
+#img1{
+    height: 50px;
+}
+#img2{
+    height: 50px;
+   // margin-right: 80%;
+}
+
+#name {
+    font-size: 30px;
+    margin-left: 10px;
+    color: white;
+    //margin-top: -20px;
+    font-family: cursive;
 
 }
