@@ -45,8 +45,48 @@ create table word_index (
 	page_id bigint unsigned,
 	count int unsigned not null,
 	important bool not null,
-	indices text not null,
 	primary key (word_id, page_id),
 	foreign key (page_id) references page(id) on delete cascade on update cascade,
 	foreign key (word_id) references word(id) on delete cascade on update cascade
+);
+
+drop table if exists word_positions;
+
+create table word_positions (
+	word_id bigint unsigned,
+	page_id bigint unsigned,
+	position bigint unsigned,
+	primary key (word_id, page_id, position),
+	foreign key (page_id) references page(id) on delete cascade on update cascade,
+	foreign key (word_id) references word(id) on delete cascade on update cascade
+);
+
+
+
+
+drop table if exists word_image;
+
+create table word_image (
+	id serial,
+	word varchar(500) not null,
+	images_count int unsigned not null,
+	primary key (id)
+);
+
+drop table if exists image;
+
+create table image (
+	id serial,
+	url text not null,
+	description tinytext default null,
+	primary key (id)
+);
+drop table if exists word_index_image;
+
+create table word_index_image (
+	word_id bigint unsigned,
+	image_id bigint unsigned,
+	primary key (word_id, image_id),
+	foreign key (image_id) references image(id) on delete cascade on update cascade,
+	foreign key (word_id) references word_image(id) on delete cascade on update cascade
 );
