@@ -7,7 +7,7 @@ import {
   RxSpeechRecognitionService,
   resultList,
 } from '@kamiazya/ngx-speech-recognition';
-import { ResultsService } from '../services/results.service';
+import { ApiService } from '../services/api.service';
 
 @Component({
   selector: 'app-home',
@@ -27,17 +27,23 @@ export class HomeComponent implements OnInit {
 
   constructor( private route: ActivatedRoute, private router: Router,
      public service: RxSpeechRecognitionService,
-     private resultsService: ResultsService ) { }
+     private apiService: ApiService ) { }
 
   ngOnInit() {
     this.suggestions = null;
 
+    localStorage.removeItem('id')
+
     let user = localStorage.getItem('id')
-    if (user != null)
+    if (user != null) {
       console.log("data from local storage = " + user)
+    }
     else{
-      localStorage.setItem('id', "1")
-      console.log("data saved to local storage = " +  localStorage.getItem('id'))
+      this.apiService.addUser().subscribe(data => {
+        console.log(data);
+        localStorage.setItem('id', data.id)
+        console.log("data saved to local storage = " +  localStorage.getItem('id'))
+      });
     }
 
     let nm = localStorage.getItem('nightMode')
@@ -64,7 +70,7 @@ export class HomeComponent implements OnInit {
   }
 
   Suggestions(text : string) {
-    this.resultsService.getSuggestions(text).subscribe(data => {
+    this.apiService.getSuggestions(text).subscribe(data => {
       this.suggestions = data._embedded.queries;
       this.suggestionsTxt = [];
       for(let s of this.suggestions) {
@@ -75,17 +81,17 @@ export class HomeComponent implements OnInit {
 
   search() {
     if(this.value.replace(/\s/g, '') != ""){
-      this.resultsService.saveQuery(this.value).subscribe(data => {
+      this.apiService.saveQuery(this.value).subscribe(data => {
       });
-      this.router.navigate(['search', this.value, "false"])
+      this.router.navigate(['search', this.value, "false", 1])
     }
   }
 
   imSearch() {
     if(this.value.replace(/\s/g, '') != ""){
-      this.resultsService.saveQuery(this.value).subscribe(data => {
+      this.apiService.saveQuery(this.value).subscribe(data => {
       });
-      this.router.navigate(['search', this.value, "true"])
+      this.router.navigate(['search', this.value, "true", 1])
     }  
   }
 

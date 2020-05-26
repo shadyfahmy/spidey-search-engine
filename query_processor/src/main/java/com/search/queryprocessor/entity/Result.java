@@ -10,7 +10,7 @@ import javax.persistence.*;
 public class Result {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    //@GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     private  String title;

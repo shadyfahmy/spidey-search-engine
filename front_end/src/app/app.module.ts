@@ -18,7 +18,7 @@ import { ResultsPageComponent } from './results-page/results-page.component';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatPaginatorModule} from '@angular/material/paginator';
 import {ScrollingModule} from '@angular/cdk/scrolling';
-import { ResultsService } from './services/results.service';
+import { ApiService } from './services/api.service';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
 
@@ -51,7 +51,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
     BrowserAnimationsModule
   ],
   providers: [
-    ResultsService
+    ApiService
   ],
   bootstrap: [AppComponent]
 })

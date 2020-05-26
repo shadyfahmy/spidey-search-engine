@@ -1,4 +1,7 @@
 <mat-toolbar id="toolbar">
+    <img src="../../assets/spidey2.png" id="img1">
+    <span id="name">Spidey</span>
+
     <form id="formfield">
         <input type="text"
         placeholder=""
@@ -49,7 +52,7 @@
 
         <mat-card *ngFor=" let r of results " id="result" [ngStyle]="{'background-color': night ? '#00000017' : nochange, 'color': night ? 'white' : nochange}">
             <mat-card-title>
-            <a id="siteTitle" href={{r.link}}>{{r.title}}</a>
+            <a id="siteTitle" href={{r.link}} (click)="history(r.id)">{{r.title}}</a>
             </mat-card-title>
             <mat-card-content>{{r.description}}
             </mat-card-content>
@@ -60,8 +63,17 @@
 </div>
 
 <div id="footer">
-    <mat-paginator id="pg"
-        [length]="100"
-        [pageSize]="10">
-    </mat-paginator>
+    <span id="name">Spidey</span>
+    <span style="font-size: x-small;">Search Engine</span>
+
+
+    <button mat-button  matSuffix mat-icon-button aria-label="Clear"
+    style="margin-left: 32%;"
+    [disabled]="page == 1" (click)="prevPage()">
+        <mat-icon [ngStyle]="{'color': page >= 2 ? 'white' : 'gray'}">keyboard_arrow_left</mat-icon>
+    </button>
+    <span>Page : {{page}}</span>
+    <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="nextPage()">
+        <mat-icon [ngStyle]="{'color': night ? nochange : 'white'}">keyboard_arrow_right</mat-icon>
+    </button>
 </div>

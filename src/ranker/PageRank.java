@@ -6,7 +6,6 @@ import java.sql.*;
 import java.util.HashSet;
 import java.util.HashMap;
 
-// TODO: Try to optimize writing to database (choose which method is best)
 // Assuming page ids are continuous
 public class PageRank {
     private final DatabaseManager dbManager;
@@ -20,23 +19,19 @@ public class PageRank {
     public static void main(String[] args) {
         DatabaseManager dbManager = new DatabaseManager();
         PageRank pageRankCalculator = new PageRank(dbManager);
-        pageRankCalculator.compareCalculationMethods();
+        boolean isAlgebraic = false;
+        long start = System.nanoTime();
+        pageRankCalculator.updatePageRanks(isAlgebraic);
+        long end = System.nanoTime();
+        System.out.println(
+                "PageRank calculation done for " + pageRankCalculator.pagesCount +
+                        " pages in " + ((end - start) / 1000000) + " ms, " +
+                        "using " + (isAlgebraic ? "algebraic" : "iterative") + " method."
+        );
     }
 
     public PageRank(DatabaseManager dbManager) {
         this.dbManager = dbManager;
-    }
-
-    public void compareCalculationMethods() {
-        long start = System.nanoTime();
-        SimpleMatrix iterativePageRanks = updatePageRanks(false);
-        long checkpoint = System.nanoTime();
-        SimpleMatrix algebraicPageRanks = updatePageRanks(true);
-        long end = System.nanoTime();
-        System.out.println("Iterative execution time: " + ((checkpoint - start) / 1000000) + " ms");
-        iterativePageRanks.print();
-        System.out.println("Algebraic execution time: " + ((end - checkpoint) / 1000000) + " ms");
-        algebraicPageRanks.print();
     }
 
     public SimpleMatrix updatePageRanks(boolean isAlgebraic) {
@@ -94,33 +89,6 @@ public class PageRank {
             statement.setDouble(2*i+2, pageRanks.get(i, 0));
         }
         statement.execute();
-//        **********************************************************************
-//        Statement statement = connection.createStatement();
-//        statement.execute("DROP TEMPORARY TABLE IF EXISTS page_ranks;");
-//        statement.execute("CREATE TEMPORARY TABLE page_ranks(id serial, page_rank double)");
-//
-//        StringBuilder query = new StringBuilder("INSERT INTO page_ranks(page_rank) values");
-//        for(int i = 0; i < pagesCount; i++) {
-//            query.append(" (?)");
-//            if (i < pagesCount - 1)
-//                query.append(",");
-//        }
-//        PreparedStatement preparedStatement = connection.prepareStatement(query.toString());
-//        for(int i = 0; i < pagesCount; i++) {
-//            preparedStatement.setDouble(i+1, pageRanks.get(i, 0));
-//        }
-//        preparedStatement.execute();
-//        statement.execute("UPDATE page SET page_rank = (SELECT page_rank FROM page_ranks WHERE page_ranks.id = page.id)");
-//        **********************************************************************
-//        PreparedStatement statement = connection.prepareStatement(
-//                "UPDATE page SET page_rank = ? WHERE id = ?"
-//        );
-//        for(int i = 0; i < pagesCount; i++) {
-//            statement.setDouble(1, pageRanks.get(i, 0));
-//            statement.setInt(2, i+1);
-//            statement.addBatch();
-//        }
-//        statement.executeBatch();
         statement.close();
     }
 
