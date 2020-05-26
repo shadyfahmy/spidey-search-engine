@@ -69,9 +69,10 @@ drop table if exists history;
 
 CREATE TABLE history (
    user int NOT NULL,
-   url int NOT NULL,
+   page bigint unsigned,
    times int NOT NULL DEFAULT '0',
-   PRIMARY KEY (user,url)
+   PRIMARY KEY (user, page),
+   FOREIGN KEY (page) REFERENCES page(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 drop table if exists queries;
@@ -91,8 +92,6 @@ create table word_positions (
 	foreign key (page_id) references page(id) on delete cascade on update cascade,
 	foreign key (word_id) references word(id) on delete cascade on update cascade
 );
-
-
 
 
 drop table if exists word_image;
