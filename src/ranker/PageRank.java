@@ -11,7 +11,7 @@ public class PageRank {
     private final DatabaseManager dbManager;
     private Connection connection;
 
-    private int pagesCount;
+    static int pagesCount;
     private int startingID;
     final static double dampingFactor = 0.85;
     final static double iterativeTolerance = 0.001;

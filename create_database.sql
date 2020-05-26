@@ -87,7 +87,7 @@ drop table if exists word_positions;
 create table word_positions (
 	word_id bigint unsigned,
 	page_id bigint unsigned,
-	position bigint unsigned,
+	position bigint,
 	primary key (word_id, page_id, position),
 	foreign key (page_id) references page(id) on delete cascade on update cascade,
 	foreign key (word_id) references word(id) on delete cascade on update cascade
