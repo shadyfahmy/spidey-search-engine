@@ -79,30 +79,60 @@ public class ApiController {
 
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/api/v1/get-results")
-    public int getResults(@RequestParam(name = "text") String text, @RequestParam(name = "user") int user ) {
+    public int getResults(@RequestParam(name = "text") String text, @RequestParam(name = "page") int page,
+                          @RequestParam(name = "user") int user ) {
         System.out.println(text);
-        ArrayList<String> impWords = new ArrayList<String>();
+        text = text.replace("\"", " \" ");
 
-        impWords = stemmer.getStemmedWords(text);
+        String words = "";
+        List<String> impWords = new ArrayList<String>();
+        List<String> phrases = new ArrayList<String>();
+        List<List<String>> impPhraseWords = new ArrayList<List<String>>();
+
+        String[] splits = text.split(" (?=([^\"]*\"[^\"]*\")*[^\"]*$)");
+        for (int i = 0; i < splits.length; i++) {
+            String split = splits[i].trim();
+            if (split.length() != 0) {
+
+                if (split.charAt(0) == '"' && split.charAt(split.length() - 1) == '"') {
+                    phrases.add(split);
+                }
+                else {
+                    words = words.concat(split + " ");
+                }
+            }
+        }
+        System.out.println(words);
+        impWords = stemmer.getStemmedWords(words);
+
+        for (int i = 0; i < phrases.size(); i++) {
+            impPhraseWords.add(stemmer.getStemmedWords(phrases.get(i)));
+        }
 
         for (int i = 0; i < impWords.size(); i++) {
             System.out.println(impWords.get(i));
         }
+        for (int i = 0; i < impPhraseWords.size(); i++) {
+            for (int j = 0; j < impPhraseWords.get(i).size(); j++)
+                System.out.println(impPhraseWords.get(i).get(j));
+        }
+
         return user;
     }
 
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/api/v1/get-images")
-    public int getImages(@RequestParam(name = "text") String text, @RequestParam(name = "user") int user ) {
+    public int getImages(@RequestParam(name = "text") String text, @RequestParam(name = "page") int page,
+                         @RequestParam(name = "user") int user ) {
         System.out.println(text);
-        ArrayList<String> impWords = new ArrayList<String>();
+
+        List<String> impWords = new ArrayList<String>();
 
         impWords = stemmer.getStemmedWords(text);
 
         for (int i = 0; i < impWords.size(); i++) {
             System.out.println(impWords.get(i));
         }
-
         return user;
     }
 
