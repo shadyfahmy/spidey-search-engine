@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 // Assuming page ids are continuous
-public class PageRank {
+public class PageRanker {
     private final DatabaseManager dbManager;
     private Connection connection;
     private int startingID;
@@ -21,12 +21,12 @@ public class PageRank {
 
     public static void main(String[] args) {
         DatabaseManager dbManager = new DatabaseManager();
-        PageRank pageRank = new PageRank(dbManager);
-        pageRank.timedUpdatePageRanks();
+        PageRanker pageRanker = new PageRanker();
+        pageRanker.timedUpdatePageRanks();
     }
 
-    public PageRank(DatabaseManager dbManager) {
-        this.dbManager = dbManager;
+    public PageRanker() {
+        dbManager = new DatabaseManager();
     }
 
     public void timedUpdatePageRanks() {
@@ -34,9 +34,9 @@ public class PageRank {
         updatePageRanks();
         long end = System.nanoTime();
         System.out.println(
-                "PageRank calculation done for " + PageRank.pagesCount +
+                "PageRank calculation done for " + PageRanker.pagesCount +
                         " pages in " + ((end - start) / 1000000) + " ms, " +
-                        "using " + (PageRank.isAlgebraic ? "algebraic" : "iterative") + " method."
+                        "using " + (PageRanker.isAlgebraic ? "algebraic" : "iterative") + " method."
         );
     }
 

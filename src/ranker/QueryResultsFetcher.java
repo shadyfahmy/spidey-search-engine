@@ -43,10 +43,9 @@ public class QueryResultsFetcher {
     }
 
     public static void main(String[] args)  {
-        DatabaseManager dbManager = new DatabaseManager();
-        QueryResultsFetcher queryResultsFetcher = new QueryResultsFetcher(dbManager);
-        PageRank pageRank = new PageRank(dbManager);
-        pageRank.updatePageRanks();
+        QueryResultsFetcher queryResultsFetcher = new QueryResultsFetcher();
+        PageRanker pageRanker = new PageRanker();
+        pageRanker.updatePageRanks();
 
         EnglishStemmer stemmer = new EnglishStemmer();
 
@@ -97,8 +96,8 @@ public class QueryResultsFetcher {
         queryResults.forEach(Page::print);
     }
 
-    public QueryResultsFetcher(DatabaseManager dbManager) {
-        this.dbManager = dbManager;
+    public QueryResultsFetcher() {
+        dbManager = new DatabaseManager();
     }
 
     public List<Page> getQueryResults(List<String> words, List<List<String>> phrases, int offset, int limit) {
@@ -230,7 +229,7 @@ public class QueryResultsFetcher {
     private int setWordsRelevanceQueryParameters(List<String> words,
                                                  PreparedStatement statement,
                                                  int paramIdx) throws SQLException {
-        statement.setInt(paramIdx++, PageRank.pagesCount);
+        statement.setInt(paramIdx++, PageRanker.pagesCount);
         for (String word : words)
             statement.setString(paramIdx++, word);
 
@@ -272,7 +271,7 @@ public class QueryResultsFetcher {
                                                       int paramIdx) throws SQLException {
         int phraseWordsCount = phraseWords.size();
 
-        statement.setInt(paramIdx++, PageRank.pagesCount);
+        statement.setInt(paramIdx++, PageRanker.pagesCount);
         // The same parameters are repeated twice
         for(int count = 1; count <= 2; count++) {
             // Set join mainTableJoin parameters

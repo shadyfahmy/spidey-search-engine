@@ -234,7 +234,6 @@ public class Indexer implements Runnable {
 							}
 
 						}
-
 					}
 				}
 				Elements img = doc.getElementsByTag("img");
@@ -243,31 +242,12 @@ public class Indexer implements Runnable {
 						Image image = new Image();
 						image.description = element.attr("alt");
 						image.description = image.description.substring(0, Math.min(image.description.length(), 254));
-						image.url = normalizeUrl(element.attr("src"));
+						image.url = element.attr("abs:src");
+						if(image.url.equals("") || !image.url.startsWith("http"))
+							continue;
 						synchronized (images){
 							images.add(image);
 						}
-					} else {
-						Elements parents = element.parents();
-						Elements headerParents = parents.select("h1, h2, h3, h4, h5, h6");
-						for(int i = 6; i > 0; i--)
-						{
-							Elements parent = headerParents.select("h"+i);
-							if(parent.size() == 0)
-								continue;
-							else
-							{
-								Image image = new Image();
-								image.description = parent.first().text();
-								image.description = image.description.substring(0, Math.min(image.description.length(), 254));
-								image.url = normalizeUrl(element.attr("src"));
-								synchronized (images){
-									images.add(image);
-								}
-							}
-
-						}
-
 					}
 				}
 				//Create a stemmer
