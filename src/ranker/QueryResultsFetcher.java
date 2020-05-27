@@ -44,8 +44,8 @@ public class QueryResultsFetcher {
 
     public static void main(String[] args)  {
         QueryResultsFetcher queryResultsFetcher = new QueryResultsFetcher();
-        PageRanker pageRanker = new PageRanker();
-        pageRanker.updatePageRanks();
+        PageRanker pageRanker = PageRanker.getInstance();
+        pageRanker.timedUpdatePageRanks();
 
 
         ArrayList<String> words = new ArrayList<>();

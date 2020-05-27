@@ -19,14 +19,21 @@ public class PageRanker {
     final static double iterativeTolerance = 0.001;
     final static boolean isAlgebraic = false;
 
-    public static void main(String[] args) {
-        DatabaseManager dbManager = new DatabaseManager();
-        PageRanker pageRanker = new PageRanker();
-        pageRanker.timedUpdatePageRanks();
+    private static class InstanceHolder {
+        private static final PageRanker instance = new PageRanker();
     }
 
-    public PageRanker() {
+    private PageRanker() {
         dbManager = new DatabaseManager();
+    }
+
+    public static PageRanker getInstance() {
+        return InstanceHolder.instance;
+    }
+
+    public static void main(String[] args) {
+        PageRanker pageRanker = new PageRanker();
+        pageRanker.timedUpdatePageRanks();
     }
 
     public void timedUpdatePageRanks() {
