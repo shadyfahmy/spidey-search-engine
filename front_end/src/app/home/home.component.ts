@@ -41,7 +41,7 @@ export class HomeComponent implements OnInit {
     else{
       this.apiService.addUser().subscribe(data => {
         console.log(data);
-        localStorage.setItem('id', data.id)
+        localStorage.setItem('id',  data.id)
         console.log("data saved to local storage = " +  localStorage.getItem('id'))
       });
     }

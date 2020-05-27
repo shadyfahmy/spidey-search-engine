@@ -39,6 +39,8 @@ public class Stemmer {
             String word = wordsList.get(i);
             if (stopwords.contains(word))
                 continue;
+            if (word.contentEquals(""))
+                continue;
             String stemmedWord;
 
             word = word.toLowerCase();
