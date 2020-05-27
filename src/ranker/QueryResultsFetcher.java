@@ -44,9 +44,6 @@ public class QueryResultsFetcher {
 
     public static void main(String[] args)  {
         QueryResultsFetcher queryResultsFetcher = new QueryResultsFetcher();
-        PageRanker pageRanker = PageRanker.getInstance();
-        pageRanker.timedUpdatePageRanks();
-
 
         ArrayList<String> words = new ArrayList<>();
 
@@ -91,6 +88,9 @@ public class QueryResultsFetcher {
     }
 
     public QueryResultsFetcher() {
+        // TODO: Move updating page ranks to the indexer
+        PageRanker pageRanker = PageRanker.getInstance();
+        pageRanker.timedUpdatePageRanks();
         dbManager = new DatabaseManager();
     }
 
