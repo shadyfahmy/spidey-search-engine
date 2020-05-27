@@ -73,7 +73,8 @@
         <mat-icon [ngStyle]="{'color': page >= 2 ? 'white' : 'gray'}">keyboard_arrow_left</mat-icon>
     </button>
     <span>Page : {{page}}</span>
-    <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="nextPage()">
-        <mat-icon [ngStyle]="{'color': night ? nochange : 'white'}">keyboard_arrow_right</mat-icon>
+    <button mat-button  matSuffix mat-icon-button aria-label="Clear"
+    [disabled]="!next" (click)="nextPage()">
+        <mat-icon [ngStyle]="{'color': next ? 'white' : 'gray'}">keyboard_arrow_right</mat-icon>
     </button>
 </div>

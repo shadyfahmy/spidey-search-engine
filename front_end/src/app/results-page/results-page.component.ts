@@ -30,6 +30,7 @@ export class ResultsPageComponent implements OnInit {
   loading = true;
   imageSearch = false;
   page: number;
+  next = false;
   recognition = new SpeechRecognition
 
   constructor(private apiService: ApiService,
@@ -105,6 +106,10 @@ export class ResultsPageComponent implements OnInit {
       if(data){
         console.log(data.page);
         this.results = data._embedded.results;
+        if(this.results.length < 20)
+          this.next = false;
+        else
+          this.next = true
         console.log(this.results)
         this.loading = false
       }      

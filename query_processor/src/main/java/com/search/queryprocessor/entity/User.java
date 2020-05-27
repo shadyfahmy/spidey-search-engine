@@ -7,7 +7,7 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "users", schema = "search")
+@Table(name = "users", schema = "test_search_engine")
 @ToString
 public class User {
     @Id

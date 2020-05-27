@@ -48,7 +48,7 @@ export class ApiService {
     let header = new HttpHeaders();
     header.set('Access-Control-Allow-Origin', '*');
     header.set('withcredentials', 'true');
-    return this.httpClient.post(this.baseUrl + "/history",{"user": user_id, "url": url_id }, {headers: header})
+    return this.httpClient.post(this.baseUrl + "/history",{"user": user_id, "page": url_id }, {headers: header})
   }
   
 }
