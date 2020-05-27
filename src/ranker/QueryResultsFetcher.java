@@ -47,9 +47,17 @@ public class QueryResultsFetcher {
         PageRanker pageRanker = new PageRanker();
         pageRanker.updatePageRanks();
 
-        EnglishStemmer stemmer = new EnglishStemmer();
 
         ArrayList<String> words = new ArrayList<>();
+
+//        words.add("blog");
+//        words.add("home");
+//
+//        List<String> urls = queryResultsFetcher.getImageSearchResults(words, 2, 1);
+//
+//        urls.forEach(System.out::println);
+
+        EnglishStemmer stemmer = new EnglishStemmer();
 
         stemmer.setCurrent("about");
         stemmer.stem();
@@ -60,37 +68,6 @@ public class QueryResultsFetcher {
         words.add(stemmer.getCurrent());
 
         ArrayList<List<String>> phrases = new ArrayList<>();
-        ArrayList<String> phraseWords1 = new ArrayList<>();
-
-        stemmer.setCurrent("more");
-        stemmer.stem();
-        phraseWords1.add(stemmer.getCurrent());
-
-        stemmer.setCurrent("featured");
-        stemmer.stem();
-        phraseWords1.add(stemmer.getCurrent());
-
-        phrases.add(phraseWords1);
-
-        ArrayList<String> phraseWords2 = new ArrayList<>();
-
-        stemmer.setCurrent("bridge");
-        stemmer.stem();
-        phraseWords2.add(stemmer.getCurrent());
-
-        stemmer.setCurrent("aftermath");
-        stemmer.stem();
-        phraseWords2.add(stemmer.getCurrent());
-
-        stemmer.setCurrent("pictured");
-        stemmer.stem();
-        phraseWords2.add(stemmer.getCurrent());
-
-        stemmer.setCurrent("near");
-        stemmer.stem();
-        phraseWords2.add(stemmer.getCurrent());
-
-        phrases.add(phraseWords2);
 
         List<Page> queryResults = queryResultsFetcher.getQueryResults(words, phrases, 0, 5);
         queryResults.forEach(Page::print);
@@ -102,6 +79,8 @@ public class QueryResultsFetcher {
 
     public List<Page> getQueryResults(List<String> words, List<List<String>> phrases, int offset, int limit) {
         try {
+            long start = System.currentTimeMillis();
+
             Connection connection = dbManager.getDBConnection();
             PreparedStatement statement = getQueryStatement(connection, words, phrases, offset, limit);
             ResultSet result = statement.executeQuery();
@@ -121,6 +100,9 @@ public class QueryResultsFetcher {
 
             statement.close();
             connection.close();
+
+            long end = System.currentTimeMillis();
+            System.out.println("Query results fetched in " + (end - start) + " ms");
 
             return queryResults;
         }
@@ -249,19 +231,19 @@ public class QueryResultsFetcher {
 
         String termFrequencyTableQuery =
                 "select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices\n" +
-                "        from ( " + coreTableQuery + " ) t1\n" + coreTableJoin.repeat(phraseWordsCount - 1) +
-                "        where (t1.word = ? " + " and t?.word = ? ".repeat(phraseWordsCount - 1) +
-                "                and t?.position - t?.position = 1 ".repeat(phraseWordsCount - 1) + ")\n" +
-                "        group by t1.page_id \n";
+                "from ( " + coreTableQuery + " ) t1\n" + coreTableJoin.repeat(phraseWordsCount - 1) +
+                "where (t1.word = ? " + " and t?.word = ? ".repeat(phraseWordsCount - 1) +
+                "and t?.position - t?.position = 1 ".repeat(phraseWordsCount - 1) + ")\n" +
+                "group by t1.page_id \n";
 
         String query;
         query =
              "select page_id, log(1 + (?/phrase_count)) * tf as relevance, indices, 1 as is_phrase from\n" +
-             "    (select count(*) as phrase_count from (\n" + termFrequencyTableQuery + ") t \n" +
-             "    ) t1,\n" +
-             "    (\n" + termFrequencyTableQuery +
-             "    ) t2,\n" +
-             "    (select count(*) as pages_count from page) t3 \n";
+             "(select count(*) as phrase_count from (\n" + termFrequencyTableQuery + ") t \n" +
+             ") t1,\n" +
+             "(\n" + termFrequencyTableQuery +
+             ") t2,\n" +
+             "(select count(*) as pages_count from page) t3 \n";
 
         return query;
     }
@@ -295,5 +277,52 @@ public class QueryResultsFetcher {
         }
 
         return paramIdx;
+    }
+
+    public List<String> getImageSearchResults(List<String> words, int offset, int limit) {
+        try {
+            long start = System.currentTimeMillis();
+            int wordsCount = words.size();
+
+            String query;
+            query =
+                    "select image_id, url, count(*) as score from word_index_image wi\n" +
+                            "join word_image w on w.id = wi.word_id\n" +
+                            "join image i on i.id = wi.image_id\n" +
+                            "where word = ? " + " or word = ? ".repeat(wordsCount - 1) +
+                            "group by image_id, url\n" +
+                            "order by score desc \n" +
+                            "limit ? , ?";
+
+            Connection connection = dbManager.getDBConnection();
+            PreparedStatement statement = connection.prepareStatement(query);
+
+            int paramIdx = 1;
+            for (String word : words)
+                statement.setString(paramIdx++, word);
+
+            statement.setInt(paramIdx++, offset);
+            statement.setInt(paramIdx, limit);
+
+            ResultSet result = statement.executeQuery();
+
+            List<String> imageURLs = new ArrayList<>();
+            while (result.next()) {
+                String url = result.getString(2);
+                imageURLs.add(url);
+            }
+
+            statement.close();
+            connection.close();
+
+            long end = System.currentTimeMillis();
+            System.out.println("Image results fetched in " + (end - start) + " ms");
+
+            return imageURLs;
+        } catch (Exception ex) {
+            System.out.println("Failed to fetch image query results: Exception occurred.");
+            ex.printStackTrace();
+            return null;
+        }
     }
 }

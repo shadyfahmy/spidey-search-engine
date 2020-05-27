@@ -31,7 +31,17 @@
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-      <console name="MySQL Connection" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select * from image]]></console>
+      <console name="MySQL Connection" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select * from word_index_image
+
+insert into word_index_image values (1, 2), (1, 3), (1, 4)
+
+select image_id, url, count(*) as score from word_index_image wi
+join word_image w on w.id = wi.word_id
+join image i on i.id = wi.image_id
+where word = 'blog' or word = 'home'
+group by image_id, url
+order by score desc
+limit 1, 2]]></console>
       <console name="PageRank" type="STANDARD" schema="mysql" session="Main"><![CDATA[SELECT UPDATE_TIME
 FROM   information_schema.tables
 WHERE  TABLE_SCHEMA = 'test_search_engine'
