@@ -12,28 +12,29 @@ import javax.persistence.Table;
 //@ToString
 public class History {
     int user;
-    int url;
+    int page;
 
     public History(){}
 
-    public History(int user, int url) {
+    public History(int user, int page) {
         this.user = user;
-        this.url = url;
+        this.page = page;
     }
 
-    public void setUrl(int url) {
-        this.url = url;
+    public void setPage(int page) {
+        this.page = page;
     }
 
     public void setUser(int user) {
         this.user = user;
     }
 
-    public int getUrl() {
-        return url;
-    }
 
     public int getUser() {
         return user;
+    }
+
+    public int getPage() {
+        return page;
     }
 }

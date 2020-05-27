@@ -52,26 +52,27 @@ public class ApiController {
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/api/v1/add-user")
     public User addUser() {
-        jdbcTemplate.execute("INSERT INTO search.users VALUES (NULL)");
-        return jdbcTemplate.queryForObject("select * from search.users where id = (select count(id) from search.users);",
+        jdbcTemplate.execute("INSERT INTO test_search_engine.users VALUES (NULL)");
+        return jdbcTemplate.queryForObject("select * from test_search_engine.users where " +
+                        "id = (select count(id) from test_search_engine.users);",
                 (us, RN) -> new User(us.getInt("id")));
     }
 
     //Add to history of a user
     @RequestMapping(method = RequestMethod.POST, value = "/api/v1/history")
     public void addHistory(@RequestBody History history) {
-        String q = "INSERT IGNORE INTO search.history (user, url) VALUES ("+String.valueOf(history.getUser())+
-                ","+String.valueOf(history.getUrl())+");";
+        String q = "INSERT IGNORE INTO test_search_engine.history (user, page) VALUES ("+String.valueOf(history.getUser())+
+                ","+String.valueOf(history.getPage())+");";
         System.out.println(q);
         jdbcTemplate.execute(q);
 
-        int times = jdbcTemplate.queryForObject("select times from search.history where (user ="+
-                        String.valueOf(history.getUser())+") and (url =" +String.valueOf(history.getUrl())+")",
+        int times = jdbcTemplate.queryForObject("select times from test_search_engine.history where (user ="+
+                        String.valueOf(history.getUser())+") and (page =" +String.valueOf(history.getPage())+")",
                 (us, RN) -> us.getInt("times"));
         times++;
 
-        String q1 =  "UPDATE search.history SET times = "+String.valueOf(times)+"  WHERE (user ="+String.valueOf(history.getUser())+
-                ") and (url ="+String.valueOf(history.getUrl())+");";
+        String q1 =  "UPDATE test_search_engine.history SET times = "+String.valueOf(times)+"  WHERE (user ="+String.valueOf(history.getUser())+
+                ") and (page ="+String.valueOf(history.getPage())+");";
         System.out.println(q1);
         jdbcTemplate.execute(q1);
 
