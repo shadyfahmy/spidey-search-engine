@@ -69,7 +69,24 @@ public class QueryResultsFetcher {
 
         ArrayList<List<String>> phrases = new ArrayList<>();
 
-        List<Page> queryResults = queryResultsFetcher.getQueryResults(words, phrases, 0, 5);
+        List<String> phrase = new ArrayList<>();
+
+        stemmer.setCurrent("more");
+        stemmer.stem();
+        phrase.add(stemmer.getCurrent());
+
+        stemmer.setCurrent("featured");
+        stemmer.stem();
+        phrase.add(stemmer.getCurrent());
+
+        stemmer.setCurrent("articles");
+        stemmer.stem();
+        phrase.add(stemmer.getCurrent());
+
+        phrases.add(phrase);
+
+
+        List<Page> queryResults = queryResultsFetcher.getQueryResults(3, words, phrases, 0, 5);
         queryResults.forEach(Page::print);
     }
 
@@ -77,12 +94,12 @@ public class QueryResultsFetcher {
         dbManager = new DatabaseManager();
     }
 
-    public List<Page> getQueryResults(List<String> words, List<List<String>> phrases, int offset, int limit) {
+    public List<Page> getQueryResults(int userID, List<String> words, List<List<String>> phrases, int offset, int limit) {
         try {
             long start = System.currentTimeMillis();
 
             Connection connection = dbManager.getDBConnection();
-            PreparedStatement statement = getQueryStatement(connection, words, phrases, offset, limit);
+            PreparedStatement statement = getQueryStatement(connection, userID, words, phrases, offset, limit);
             ResultSet result = statement.executeQuery();
 
             List<Page> queryResults = new ArrayList<>();
@@ -137,13 +154,13 @@ public class QueryResultsFetcher {
         }
     }
 
-    private PreparedStatement getQueryStatement(Connection connection, List<String> words, List<List<String>> phrases,
-                                        int offset, int limit) throws SQLException {
+    private PreparedStatement getQueryStatement(Connection connection, int userID, List<String> words,
+                                                List<List<String>> phrases, int offset, int limit) throws SQLException {
         // Build query string
         StringBuilder query = new StringBuilder(
-                "select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score, is_phrase from\n" +
+                "select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score, is_phrase, user from\n" +
                 "    ( \n" +
-                "    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase from\n" +
+                "    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase, user from\n" +
                 "    ( \n"
         );
 
@@ -163,12 +180,13 @@ public class QueryResultsFetcher {
 
         query.append(
                 ") t\n" +
-                "    group by page_id\n" +
-                "    order by total_relevance desc" +
-                "    limit ?, ? \n" +
+                "    left join history h on t.page_id = h.page and user = ? \n" +
+                "    group by page_id, user\n" +
+                "    order by user desc, is_phrase desc, total_relevance desc\n" +
+                "    limit ? , ?" +
                 "    ) r\n" +
                 "join page p on p.id = r.page_id\n" +
-                "order by is_phrase desc, score desc"
+                "order by user desc, is_phrase desc, score desc"
         );
 
         PreparedStatement statement = connection.prepareStatement(query.toString());
@@ -182,6 +200,7 @@ public class QueryResultsFetcher {
         for (List<String> phrase : phrases)
             paramIdx = setPhraseRelevanceQueryParameters(phrase, statement, paramIdx);
 
+        statement.setInt(paramIdx++, userID);
         statement.setInt(paramIdx++, offset);
         statement.setInt(paramIdx, limit);
 
