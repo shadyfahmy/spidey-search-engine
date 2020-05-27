@@ -46,7 +46,7 @@ public class QueryResultsFetcher {
         DatabaseManager dbManager = new DatabaseManager();
         QueryResultsFetcher queryResultsFetcher = new QueryResultsFetcher(dbManager);
         PageRank pageRank = new PageRank(dbManager);
-        pageRank.updatePageRanks(false);
+        pageRank.updatePageRanks();
 
         EnglishStemmer stemmer = new EnglishStemmer();
 

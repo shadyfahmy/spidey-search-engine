@@ -2,39 +2,45 @@ package ranker;
 
 import database_manager.DatabaseManager;
 import org.ejml.simple.SimpleMatrix;
+
 import java.sql.*;
-import java.util.HashSet;
 import java.util.HashMap;
+import java.util.HashSet;
 
 // Assuming page ids are continuous
 public class PageRank {
     private final DatabaseManager dbManager;
     private Connection connection;
+    private int startingID;
 
     static int pagesCount;
-    private int startingID;
+
     final static double dampingFactor = 0.85;
     final static double iterativeTolerance = 0.001;
+    final static boolean isAlgebraic = false;
 
     public static void main(String[] args) {
         DatabaseManager dbManager = new DatabaseManager();
-        PageRank pageRankCalculator = new PageRank(dbManager);
-        boolean isAlgebraic = false;
-        long start = System.nanoTime();
-        pageRankCalculator.updatePageRanks(isAlgebraic);
-        long end = System.nanoTime();
-        System.out.println(
-                "PageRank calculation done for " + pageRankCalculator.pagesCount +
-                        " pages in " + ((end - start) / 1000000) + " ms, " +
-                        "using " + (isAlgebraic ? "algebraic" : "iterative") + " method."
-        );
+        PageRank pageRank = new PageRank(dbManager);
+        pageRank.timedUpdatePageRanks();
     }
 
     public PageRank(DatabaseManager dbManager) {
         this.dbManager = dbManager;
     }
 
-    public SimpleMatrix updatePageRanks(boolean isAlgebraic) {
+    public void timedUpdatePageRanks() {
+        long start = System.nanoTime();
+        updatePageRanks();
+        long end = System.nanoTime();
+        System.out.println(
+                "PageRank calculation done for " + PageRank.pagesCount +
+                        " pages in " + ((end - start) / 1000000) + " ms, " +
+                        "using " + (PageRank.isAlgebraic ? "algebraic" : "iterative") + " method."
+        );
+    }
+
+    public void updatePageRanks() {
         try {
             connection = dbManager.getDBConnection();
             updatePagesMetadata();
@@ -47,11 +53,9 @@ public class PageRank {
                 pageRanks = calcPageRanksIterative(adjacencyMatrix);
             savePageRanks(pageRanks);
             connection.close();
-            return pageRanks;
         } catch (Exception ex) {
             System.out.println("Failed to calculate PageRank: Exception occurred.");
             ex.printStackTrace();
-            return null;
         }
     }
 

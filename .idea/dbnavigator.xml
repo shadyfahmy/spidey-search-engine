@@ -25,13 +25,19 @@
     <show-object-properties value="true" />
     <loaded-nodes>
       <connection connection-id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
+        <schema name="information_schema" object-types="view, column, table" />
+        <schema name="mysql" object-types="function, table" />
         <schema name="test_search_engine" object-types="view, function, index, column, table, procedure" />
       </connection>
     </loaded-nodes>
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-      <console name="MySQL Connection" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[-- ALL WORDS RELEVANCE QUERY
+      <console name="PageRank" type="STANDARD" schema="mysql" session="Main"><![CDATA[SELECT UPDATE_TIME
+FROM   information_schema.tables
+WHERE  TABLE_SCHEMA = 'test_search_engine'
+   AND TABLE_NAME = 'page_connections']]></console>
+      <console name="QueryResultsFetcher" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[-- ALL WORDS RELEVANCE QUERY
 select wi.page_id, SUM((1 + log(count)) * idf + important) as relevance, group_concat(position) as indices, 0 as is_phrase
 from page p
 join word_index wi on wi.page_id = p.id
