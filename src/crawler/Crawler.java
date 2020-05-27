@@ -454,10 +454,10 @@ public class Crawler implements Runnable {
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate( query, Statement.RETURN_GENERATED_KEYS );
             ResultSet rs = stmt.getGeneratedKeys();
-            stmt.close();
             rs.beforeFirst();
             rs.next();
             int id = updateId != -1? updateId:rs.getInt(1);
+            stmt.close();
             // System.out.println("ID: "+ id);
             BufferedWriter writer = new BufferedWriter(new FileWriter(Crawler.outputFolderBase + id + ".html"));
             writer.write(urlContent.toString());

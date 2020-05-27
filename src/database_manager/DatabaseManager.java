@@ -1,6 +1,6 @@
 package database_manager;
 
-import com.mysql.jdbc.Driver;
+import com.mysql.cj.jdbc.Driver;
 
 import java.io.File;
 import java.io.FileReader;
@@ -22,7 +22,7 @@ public class DatabaseManager {
             username = props.getProperty("dbUsername");
             password = props.getProperty("dbPassword");
             dbName = props.getProperty("dbName");
-            connection_url = "jdbc:mysql://localhost:3306/" + dbName + "?useUnicode=true&characterEncoding=UTF-8";
+            connection_url = "jdbc:mysql://localhost:3306/" + dbName + "?useUnicode=true&characterEncoding=UTF-8&useSSL=false";
             reader.close();
         } catch (Exception ex) {
             System.out.println(ex.getClass());
@@ -31,7 +31,6 @@ public class DatabaseManager {
 
     public Connection getDBConnection() {
         try {
-            DriverManager.registerDriver(new Driver());
             return DriverManager.getConnection(connection_url, username, password);
         } catch (Exception e) {
             throw new RuntimeException("Cannot connect to database", e);
@@ -40,8 +39,7 @@ public class DatabaseManager {
 
     Connection getMySQLDBConnection() {
         try {
-            String mysql_db_connection_url = "jdbc:mysql://localhost:3306/mysql";
-            DriverManager.registerDriver(new Driver());
+            String mysql_db_connection_url = "jdbc:mysql://localhost:3306/mysql?useSSL=false";
             return DriverManager.getConnection(mysql_db_connection_url, username, password);
         } catch (Exception e) {
             throw new RuntimeException("Cannot connect to MySQL database", e);
