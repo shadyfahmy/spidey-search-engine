@@ -39,6 +39,11 @@
 <div id="mainContainer" [ngStyle]="{'background-color': night ? '#141d26' : nochange, 'padding-bottom': imageSearch ? '200px' : '30px'}">
 
     <div *ngIf="imageSearch" id="imgsContainer">
+
+        <mat-card id="result" *ngIf="results == null && loading == false" [ngStyle]="{'background-color': night ? '#00000017' : nochange, 'color': night ? 'white' : nochange}"><mat-card-title>
+            No Results Found
+        </mat-card-title></mat-card>
+
         <mat-card *ngFor=" let i of images" id="im">
             <img src={{i}} alt="" width="200" height="200">
         </mat-card>

@@ -91,22 +91,25 @@ export class ResultsPageComponent implements OnInit {
       this.apiService.getImages(this.value,this.page,localStorage.getItem('id')).subscribe(data => {
         this.results = null
         this.images = null
-        if(data){
+        if(data.length > 0){
           this.images = data;
           if(this.images.length < 20)
             this.next = false;
           else
             this.next = true
           console.log(this.images)
-          this.loading = false
         }      
+        else {
+          this.next = false;
+          this.loading = false
+        }
       })
     }
     else {
       this.apiService.getResults(this.value,this.page,localStorage.getItem('id')).subscribe(data => {
         this.results = null
         this.images = null
-        if(data){
+        if(data.length > 0){
           this.results = data;
           if(this.results.length < 20)
             this.next = false;
@@ -114,7 +117,12 @@ export class ResultsPageComponent implements OnInit {
             this.next = true
           console.log(this.results)
           this.loading = false
-        }      
+        }
+        else {
+          this.next = false;
+          this.loading = false
+        }
+      
       })
     }
 
