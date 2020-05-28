@@ -22,10 +22,10 @@ public class QueryResultsFetcher {
     final int maxSnippets = 5;
 
     public static class Page {
-        int id;
-        String url;
-        String title;
-        String description;
+        public int id;
+        public String url;
+        public String title;
+        public String description;
 
         public Page(int id, String url, String title, String description) {
             this.id = id;

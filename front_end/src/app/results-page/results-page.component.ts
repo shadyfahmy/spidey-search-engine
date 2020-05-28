@@ -45,20 +45,6 @@ export class ResultsPageComponent implements OnInit {
       else
         this.imageSearch = false;
     } )  
-
-    this.images = [
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg",
-  "https://www.gamasutra.com/db_area/images/news/2018/Jun/320213/supermario64thumb1.jpg"
-  ]
   }
 
   ngOnInit() {
@@ -101,19 +87,37 @@ export class ResultsPageComponent implements OnInit {
 
     this.suggestions = null;
 
-    this.apiService.getResults().subscribe(data => {
-      this.results = null
-      if(data){
-        console.log(data.page);
-        this.results = data._embedded.results;
-        if(this.results.length < 20)
-          this.next = false;
-        else
-          this.next = true
-        console.log(this.results)
-        this.loading = false
-      }      
-    })
+    if(this.imageSearch) {
+      this.apiService.getImages(this.value,this.page,localStorage.getItem('id')).subscribe(data => {
+        this.results = null
+        this.images = null
+        if(data){
+          this.images = data;
+          if(this.images.length < 20)
+            this.next = false;
+          else
+            this.next = true
+          console.log(this.images)
+          this.loading = false
+        }      
+      })
+    }
+    else {
+      this.apiService.getResults(this.value,this.page,localStorage.getItem('id')).subscribe(data => {
+        this.results = null
+        this.images = null
+        if(data){
+          this.results = data;
+          if(this.results.length < 20)
+            this.next = false;
+          else
+            this.next = true
+          console.log(this.results)
+          this.loading = false
+        }      
+      })
+    }
+
   }
 
   Search() {
@@ -121,7 +125,8 @@ export class ResultsPageComponent implements OnInit {
       this.imageSearch = false;
       this.apiService.saveQuery(this.value).subscribe(data => {
       });
-      this.router.navigate(['search', this.value, "false", 0])
+      this.router.navigate(['search', this.value, "false", 1])
+      this.ngOnInit()
     }
   }
 
@@ -130,7 +135,8 @@ export class ResultsPageComponent implements OnInit {
       this.imageSearch = true;
       this.apiService.saveQuery(this.value).subscribe(data => {
       });
-      this.router.navigate(['search', this.value, "true", 0])
+      this.router.navigate(['search', this.value, "true", 1])
+      this.ngOnInit()
     }
   }
 

@@ -81,7 +81,7 @@ public class ApiController {
     @RequestMapping(method = RequestMethod.GET, value = "/api/v1/get-results")
     public List<QueryResultsFetcher.Page> getResults(@RequestParam(name = "text") String text, @RequestParam(name = "page") int page,
                                                      @RequestParam(name = "user") int user ) {
-        System.out.println(text);
+
         text = text.replace("\"", " \" ");
 
         String words = "";
@@ -102,40 +102,25 @@ public class ApiController {
                 }
             }
         }
-        System.out.println(words);
         impWords = stemmer.getStemmedWords(words);
 
         for (int i = 0; i < phrases.size(); i++) {
             impPhraseWords.add(stemmer.getStemmedWords(phrases.get(i)));
         }
 
-        for (int i = 0; i < impWords.size(); i++) {
-            System.out.println(impWords.get(i));
-        }
-        for (int i = 0; i < impPhraseWords.size(); i++) {
-            for (int j = 0; j < impPhraseWords.get(i).size(); j++)
-                System.out.println(impPhraseWords.get(i).get(j));
-        }
-        //return 5;
-        List<QueryResultsFetcher.Page> r = fetcher.getQueryResults(user, impWords, impPhraseWords, 0, 20);
-        System.out.println((r.get(0)).title);
-        return r;
+        int offset = (page - 1)*20;
+        return fetcher.getQueryResults(user, impWords, impPhraseWords, offset, 20);
     }
 
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/api/v1/get-images")
-    public int getImages(@RequestParam(name = "text") String text, @RequestParam(name = "page") int page,
+    public List<String> getImages(@RequestParam(name = "text") String text, @RequestParam(name = "page") int page,
                          @RequestParam(name = "user") int user ) {
-        System.out.println(text);
 
         List<String> impWords = new ArrayList<String>();
-
         impWords = stemmer.getStemmedWords(text);
-
-        for (int i = 0; i < impWords.size(); i++) {
-            System.out.println(impWords.get(i));
-        }
-        return user;
+        int offset = (page - 1)*10;
+        return fetcher.getImageSearchResults(impWords, offset, 10);
     }
 
 }
