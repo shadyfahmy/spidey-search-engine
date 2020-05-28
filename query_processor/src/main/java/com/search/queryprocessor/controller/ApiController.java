@@ -7,8 +7,11 @@ import com.search.queryprocessor.repository.QueryRepository;
 import com.search.queryprocessor.utils.Stemmer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.web.bind.annotation.*;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import ranker.QueryResultsFetcher;
@@ -50,11 +53,19 @@ public class ApiController {
     //Add new user to database and return the added user
     @ResponseBody
     @RequestMapping(method = RequestMethod.POST, value = "/api/v1/add-user")
-    public User addUser() {
+    public List<User> addUser() {
         jdbcTemplate.execute("INSERT INTO test_search_engine.users VALUES (NULL)");
-        return jdbcTemplate.queryForObject("select * from test_search_engine.users where " +
+
+        List<User> user = this.jdbcTemplate.query(
+                "select * from test_search_engine.users where " +
                         "id = (select count(id) from test_search_engine.users);",
-                (us, RN) -> new User(us.getInt("id")));
+                new RowMapper<User>() {
+                    public User mapRow(ResultSet rs, int rowNum) throws SQLException {
+                        User u = new User(rs.getInt("id"));
+                        return u;
+                    }
+                });
+        return user;
     }
 
     //Add to history of a user
