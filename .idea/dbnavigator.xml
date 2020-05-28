@@ -23,90 +23,17 @@
     <autoscroll-to-editor value="false" />
     <autoscroll-from-editor value="true" />
     <show-object-properties value="true" />
-    <loaded-nodes>
-      <connection connection-id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-        <schema name="information_schema" object-types="table" />
-        <schema name="test_search_engine" object-types="table, function, view, column" />
-      </connection>
-    </loaded-nodes>
+    <loaded-nodes />
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
-      <console name="MySQL Connection" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select user, page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase from
-    (
-    select wi.page_id, SUM((1 + log(count)) * idf + important) as relevance, group_concat(position) as indices, 0 as is_phrase
-    from page p
-    join word_index wi on wi.page_id = p.id
-    join word w on wi.word_id = w.id
-    join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
-    join (
-        select word_id, log(1 + (10 / y)) as idf from 
-        (select id as word_id, pages_count as y from word where word ='about' or word = 'your') as t2
-    ) t on t.word_id = w.id
-    group by page_id
-    
-    union
-    
-    select page_id, log(1 + (10/phrase_count)) * tf as relevance, indices, 1 as is_phrase from
-        (select count(*) as phrase_count from 
-            (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices
-            from 
-                (select wi.page_id, word, wp.position from word_index wi 
-                 join word w on w.id = wi.word_id
-                 join word_positions wp 
-                 on wi.word_id = wp.word_id and wi.page_id = wp.page_id 
-                ) t1
-            join 
-                    (select wi.page_id, word, wp.position from word_index wi 
-                     join word w on w.id = wi.word_id
-                     join word_positions wp 
-                     on wi.word_id = wp.word_id and wi.page_id = wp.page_id
-                    ) t2 on t1.page_id = t2.page_id
-                join
-                    (select wi.page_id, word, wp.position from word_index wi 
-                     join word w on w.id = wi.word_id
-                     join word_positions wp 
-                     on wi.word_id = wp.word_id and wi.page_id = wp.page_id
-                    ) t3 on t1.page_id = t3.page_id
-            where (t1.word = 'more' and t2.word = 'featur' and t3.word = 'articl'
-                    and t2.position - t1.position = 1 and t3.position - t2.position = 1)
-            group by t1.page_id) t
-        ) t1,
-        (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices
-            from 
-                (select wi.page_id, word, wp.position from word_index wi 
-                 join word w on w.id = wi.word_id
-                 join word_positions wp 
-                 on wi.word_id = wp.word_id and wi.page_id = wp.page_id 
-                ) t1
-            join 
-                    (select wi.page_id, word, wp.position from word_index wi 
-                     join word w on w.id = wi.word_id
-                     join word_positions wp 
-                     on wi.word_id = wp.word_id and wi.page_id = wp.page_id
-                    ) t2 on t1.page_id = t2.page_id
-                join
-                    (select wi.page_id, word, wp.position from word_index wi 
-                     join word w on w.id = wi.word_id
-                     join word_positions wp 
-                     on wi.word_id = wp.word_id and wi.page_id = wp.page_id
-                    ) t3 on t1.page_id = t3.page_id
-            where (t1.word = 'more' and t2.word = 'featur' and t3.word = 'articl'
-                    and t2.position - t1.position = 1 and t3.position - t2.position = 1)
-            group by t1.page_id
-        ) t2,
-        (select count(*) as pages_count from page) t3
-    ) t
-    
-    left join history h on t.page_id = h.page and user = 1
-    group by page_id, user
-    order by user desc, is_phrase desc, total_relevance desc]]></console>
+      <console name="MySQL Connection" type="STANDARD" schema="test_search_engine" session="Main" />
       <console name="PageRank" type="STANDARD" schema="mysql" session="Main"><![CDATA[SELECT UPDATE_TIME
 FROM   information_schema.tables
 WHERE  TABLE_SCHEMA = 'test_search_engine'
    AND TABLE_NAME = 'page_connections']]></console>
       <console name="QueryResultsFetcher" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[-- ALL WORDS RELEVANCE QUERY
-select wi.page_id, SUM((1 + log(count)) * idf + important) as relevance, group_concat(position) as indices, 0 as is_phrase
+select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, 0 as is_phrase, BIT_OR(important) as important
 from page p
 join word_index wi on wi.page_id = p.id
 join word w on wi.word_id = w.id
@@ -121,17 +48,17 @@ group by page_id
 union
 
 -- ONE PHRASE RELEVANCE QUERY (2 WORDS)
-select page_id, log(1 + (1000/phrase_count)) * tf as relevance, indices, 1 as is_phrase from
+select page_id, log(1 + (1000/phrase_count)) * tf as relevance, indices, 1 as is_phrase, important from
     (select count(*) as phrase_count from 
-        (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices
+        (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices, bit_or(t1.important and t2.important) as important 
             from 
-                (select wi.page_id, word, wp.position from word_index wi 
+                (select wi.page_id, word, important, wp.position from word_index wi 
                  join word w on w.id = wi.word_id
                  join word_positions wp 
                  on wi.word_id = wp.word_id and wi.page_id = wp.page_id 
                 ) t1
             join 
-                (select wi.page_id, word, wp.position from word_index wi 
+                (select wi.page_id, word, important, wp.position from word_index wi 
                  join word w on w.id = wi.word_id
                  join word_positions wp 
                  on wi.word_id = wp.word_id and wi.page_id = wp.page_id
@@ -141,15 +68,15 @@ select page_id, log(1 + (1000/phrase_count)) * tf as relevance, indices, 1 as is
                     and t2.position - t1.position = 1)
             group by t1.page_id) t
     ) t1,
-    (select t1.page_id, 1 + log(count(*))as tf, group_concat(t1.position) as indices
+    (select t1.page_id, 1 + log(count(*))as tf, group_concat(t1.position) as indices, bit_or(t1.important and t2.important) as important 
         from 
-            (select wi.page_id, word, wp.position from word_index wi 
+            (select wi.page_id, word, important, wp.position from word_index wi 
              join word w on w.id = wi.word_id
              join word_positions wp 
              on wi.word_id = wp.word_id and wi.page_id = wp.page_id 
             ) t1
         join 
-            (select wi.page_id, word, wp.position from word_index wi 
+            (select wi.page_id, word, important, wp.position from word_index wi 
              join word w on w.id = wi.word_id
              join word_positions wp 
              on wi.word_id = wp.word_id and wi.page_id = wp.page_id
@@ -165,23 +92,23 @@ select page_id, log(1 + (1000/phrase_count)) * tf as relevance, indices, 1 as is
 union
 
 -- ONE PHRASE RELEVANCE QUERY (3 WORDS)
-select page_id, (10/phrase_count) * tf as relevance, indices, 1 as is_phrase from
+select page_id, (10/phrase_count) * tf as relevance, indices, 1 as is_phrase, important from
     (select count(*) as phrase_count from 
-        (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices
+        (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices, bit_or(t1.important and t2.important and t3.important) as important
         from 
-            (select wi.page_id, word, wp.position from word_index wi 
+            (select wi.page_id, word, important, wp.position from word_index wi 
              join word w on w.id = wi.word_id
              join word_positions wp 
              on wi.word_id = wp.word_id and wi.page_id = wp.page_id 
             ) t1
         join 
-                (select wi.page_id, word, wp.position from word_index wi 
+                (select wi.page_id, word, important, wp.position from word_index wi 
                  join word w on w.id = wi.word_id
                  join word_positions wp 
                  on wi.word_id = wp.word_id and wi.page_id = wp.page_id
                 ) t2 on t1.page_id = t2.page_id
             join
-                (select wi.page_id, word, wp.position from word_index wi 
+                (select wi.page_id, word, important, wp.position from word_index wi 
                  join word w on w.id = wi.word_id
                  join word_positions wp 
                  on wi.word_id = wp.word_id and wi.page_id = wp.page_id
@@ -190,21 +117,21 @@ select page_id, (10/phrase_count) * tf as relevance, indices, 1 as is_phrase fro
                 and t2.position - t1.position = 1 and t3.position - t2.position = 1)
         group by t1.page_id) t
     ) t1,
-    (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices
+    (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices, bit_or(t1.important and t2.important and t3.important) as important
         from 
-            (select wi.page_id, word, wp.position from word_index wi 
+            (select wi.page_id, word, important, wp.position from word_index wi 
              join word w on w.id = wi.word_id
              join word_positions wp 
              on wi.word_id = wp.word_id and wi.page_id = wp.page_id 
             ) t1
         join 
-                (select wi.page_id, word, wp.position from word_index wi 
+                (select wi.page_id, word, important, wp.position from word_index wi 
                  join word w on w.id = wi.word_id
                  join word_positions wp 
                  on wi.word_id = wp.word_id and wi.page_id = wp.page_id
                 ) t2 on t1.page_id = t2.page_id
             join
-                (select wi.page_id, word, wp.position from word_index wi 
+                (select wi.page_id, word, important, wp.position from word_index wi 
                  join word w on w.id = wi.word_id
                  join word_positions wp 
                  on wi.word_id = wp.word_id and wi.page_id = wp.page_id
@@ -219,69 +146,59 @@ select page_id, (10/phrase_count) * tf as relevance, indices, 1 as is_phrase fro
 
 
 -- COMBINED QUERY
-select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score, is_phrase, user from
+select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score from
     (
-    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase, user from
+    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase, user, bit_or(important) as important from
     (
-    select wi.page_id, SUM((1 + log(count)) * idf + important) as relevance, group_concat(position) as indices, 0 as is_phrase
+    select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, 0 as is_phrase, BIT_OR(important) as important
     from page p
     join word_index wi on wi.page_id = p.id
     join word w on wi.word_id = w.id
     join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
     join (
-        select word_id, log(1 + (10 / y)) as idf from 
+        select word_id, log(1 + (10/ y)) as idf from 
         (select id as word_id, pages_count as y from word where word ='about' or word = 'your') as t2
     ) t on t.word_id = w.id
     group by page_id
     
     union
     
-    select page_id, log(1 + (10/phrase_count)) * tf as relevance, indices, 1 as is_phrase from
+    select page_id, log(1 + (1000/phrase_count)) * tf as relevance, indices, 1 as is_phrase, important from
         (select count(*) as phrase_count from 
-            (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices
-            from 
-                (select wi.page_id, word, wp.position from word_index wi 
-                 join word w on w.id = wi.word_id
-                 join word_positions wp 
-                 on wi.word_id = wp.word_id and wi.page_id = wp.page_id 
-                ) t1
-            join 
-                    (select wi.page_id, word, wp.position from word_index wi 
+            (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices, bit_or(t1.important and t2.important) as important 
+                from 
+                    (select wi.page_id, word, important, wp.position from word_index wi 
+                     join word w on w.id = wi.word_id
+                     join word_positions wp 
+                     on wi.word_id = wp.word_id and wi.page_id = wp.page_id 
+                    ) t1
+                join 
+                    (select wi.page_id, word, important, wp.position from word_index wi 
                      join word w on w.id = wi.word_id
                      join word_positions wp 
                      on wi.word_id = wp.word_id and wi.page_id = wp.page_id
-                    ) t2 on t1.page_id = t2.page_id
-                join
-                    (select wi.page_id, word, wp.position from word_index wi 
-                     join word w on w.id = wi.word_id
-                     join word_positions wp 
-                     on wi.word_id = wp.word_id and wi.page_id = wp.page_id
-                    ) t3 on t1.page_id = t3.page_id
-            where (t1.word = 'more' and t2.word = 'featur' and t3.word = 'articl'
-                    and t2.position - t1.position = 1 and t3.position - t2.position = 1)
-            group by t1.page_id) t
+                    ) t2
+                on t1.page_id = t2.page_id
+                where (t1.word = 'more' and t2.word = 'featur'
+                        and t2.position - t1.position = 1)
+                group by t1.page_id) t
         ) t1,
-        (select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices
+        (select t1.page_id, 1 + log(count(*))as tf, group_concat(t1.position) as indices, bit_or(t1.important and t2.important) as important 
             from 
-                (select wi.page_id, word, wp.position from word_index wi 
+                (select wi.page_id, word, important, wp.position from word_index wi 
                  join word w on w.id = wi.word_id
                  join word_positions wp 
                  on wi.word_id = wp.word_id and wi.page_id = wp.page_id 
                 ) t1
             join 
-                    (select wi.page_id, word, wp.position from word_index wi 
-                     join word w on w.id = wi.word_id
-                     join word_positions wp 
-                     on wi.word_id = wp.word_id and wi.page_id = wp.page_id
-                    ) t2 on t1.page_id = t2.page_id
-                join
-                    (select wi.page_id, word, wp.position from word_index wi 
-                     join word w on w.id = wi.word_id
-                     join word_positions wp 
-                     on wi.word_id = wp.word_id and wi.page_id = wp.page_id
-                    ) t3 on t1.page_id = t3.page_id
-            where (t1.word = 'more' and t2.word = 'featur' and t3.word = 'articl'
-                    and t2.position - t1.position = 1 and t3.position - t2.position = 1)
+                (select wi.page_id, word, important, wp.position from word_index wi 
+                 join word w on w.id = wi.word_id
+                 join word_positions wp 
+                 on wi.word_id = wp.word_id and wi.page_id = wp.page_id
+                ) t2
+            on t1.page_id = t2.page_id
+            where (t1.word = 'more' and t2.word = 'featur'
+                    and t2.position - t1.position = 1)
             group by t1.page_id
         ) t2,
         (select count(*) as pages_count from page) t3
@@ -289,24 +206,34 @@ select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank
     
     left join history h on t.page_id = h.page and user = 1
     group by page_id, user
-    order by user desc, is_phrase desc, total_relevance desc
+    order by user desc, important desc, is_phrase desc, total_relevance desc
     limit 0, 5
     ) r
 join page p on p.id = r.page_id
-order by user desc, is_phrase desc, score desc;
+order by user desc, important desc, is_phrase desc, score desc;
 
 
 -- TEST
-select wi.page_id, wi.word_id, 1 + log(count), idf
+select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score from
+    ( 
+    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase, user, bit_or(important) as important from    ( 
+select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, 0 as is_phrase, BIT_OR(important) as important
 from page p
 join word_index wi on wi.page_id = p.id
 join word w on wi.word_id = w.id
 join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
 join (
-    select word_id, log(1 + (10/ y)) as idf from 
-    (select id as word_id, pages_count as y from word where word ='about' or word = 'your') as t2
+    select word_id, log(1 + (28 / y)) as idf from 
+    (select id as word_id, pages_count as y from word where word = 'reddit' or word = 'internet'  or word = 'english'  or word = 'web'  or word = 'googl'  or word = 'play'  or word = 'stop' ) as t2
 ) t on t.word_id = w.id
-order by count desc]]></console>
+group by page_id
+) t
+    left join history h on t.page_id = h.page and user = 3 
+    group by page_id, user
+    order by user desc, important desc, is_phrase desc, total_relevance desc    limit 0 , 5    ) r
+join page p on p.id = r.page_id
+order by user desc, important desc, is_phrase desc, score desc]]></console>
+      <console name="Test" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select * from word_index]]></console>
     </connection>
   </component>
   <component name="DBNavigator.Project.DatabaseFileManager">
@@ -351,8 +278,8 @@ order by count desc]]></console>
           <config-type value="BASIC" />
           <database-version value="5.7" />
           <driver-source value="EXTERNAL" />
-          <driver-library value="$PROJECT_DIR$/lib/mysql-connector-java-5.1.4.jar" />
-          <driver value="com.mysql.jdbc.Driver" />
+          <driver-library value="$PROJECT_DIR$/lib/mysql-connector-java-8.0.20.jar" />
+          <driver value="com.mysql.cj.jdbc.Driver" />
           <url-type value="DATABASE" />
           <host value="localhost" />
           <port value="3306" />
