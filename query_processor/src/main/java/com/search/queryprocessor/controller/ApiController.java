@@ -119,8 +119,8 @@ public class ApiController {
 
         List<String> impWords = new ArrayList<String>();
         impWords = stemmer.getStemmedWords(text);
-        int offset = (page - 1)*10;
-        return fetcher.getImageSearchResults(impWords, offset, 10);
+        int offset = (page - 1)*20;
+        return fetcher.getImageSearchResults(impWords, offset, 20);
     }
 
 }

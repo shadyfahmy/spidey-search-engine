@@ -49,7 +49,8 @@ export class ResultsPageComponent implements OnInit {
 
   ngOnInit() {
     this.loading = true;
-
+    this.results = null
+    this.images = null
     //localStorage.removeItem('id')
 
     let user = localStorage.getItem('id')
