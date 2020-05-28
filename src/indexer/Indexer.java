@@ -253,7 +253,7 @@ public class Indexer implements Runnable {
 				//Create a stemmer
 				EnglishStemmer stemmer = new EnglishStemmer();
 				//Populate important words
-				ArrayList<String> importantTags = (ArrayList<String>) doc.select("h1, h2, title").eachText();
+				ArrayList<String> importantTags = (ArrayList<String>) doc.select("title").eachText();
 				HashMap<String, Boolean> importantWords = new HashMap<String, Boolean>();
 				//System.out.println(Arrays.toString(importantTags.toArray()));
 				for (int i = 0; i < importantTags.size(); i++) {

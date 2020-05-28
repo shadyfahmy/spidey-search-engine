@@ -56,27 +56,43 @@ public class QueryResultsFetcher {
 
         EnglishStemmer stemmer = new EnglishStemmer();
 
-        stemmer.setCurrent("about");
-        stemmer.stem();
-        words.add(stemmer.getCurrent());
-
-        stemmer.setCurrent("your");
-        stemmer.stem();
-        words.add(stemmer.getCurrent());
+//        stemmer.setCurrent("reddit");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
+//
+//        stemmer.setCurrent("internet");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
+//
+//        stemmer.setCurrent("english");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
+//
+//        stemmer.setCurrent("web");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
+//
+//        stemmer.setCurrent("google");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
+//
+//        stemmer.setCurrent("play");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
+//
+//        stemmer.setCurrent("stop");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
 
         ArrayList<List<String>> phrases = new ArrayList<>();
 
         List<String> phrase = new ArrayList<>();
 
-        stemmer.setCurrent("more");
+        stemmer.setCurrent("learn");
         stemmer.stem();
         phrase.add(stemmer.getCurrent());
 
-        stemmer.setCurrent("featured");
-        stemmer.stem();
-        phrase.add(stemmer.getCurrent());
-
-        stemmer.setCurrent("articles");
+        stemmer.setCurrent("anything");
         stemmer.stem();
         phrase.add(stemmer.getCurrent());
 
@@ -94,7 +110,8 @@ public class QueryResultsFetcher {
         dbManager = new DatabaseManager();
     }
 
-    public List<Page> getQueryResults(int userID, List<String> words, List<List<String>> phrases, int offset, int limit) {
+    public List<Page> getQueryResults(int userID, List<String> words, List<List<String>> phrases,
+                                      int offset, int limit) {
         try {
             long start = System.currentTimeMillis();
 
@@ -131,7 +148,8 @@ public class QueryResultsFetcher {
     }
 
     private List<Integer> getNumericIndices(String indicesString, int limit) {
-        return Arrays.stream(indicesString.split(",")).limit(limit).map(Integer::parseInt).collect(Collectors.toList());
+        return Arrays.stream(indicesString.split(","))
+                .limit(limit).map(Integer::parseInt).collect(Collectors.toList());
     }
 
     private String getPageSnippets(int pageID, List<Integer> indices) {
@@ -158,9 +176,10 @@ public class QueryResultsFetcher {
                                                 List<List<String>> phrases, int offset, int limit) throws SQLException {
         // Build query string
         StringBuilder query = new StringBuilder(
-                "select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score, is_phrase, user from\n" +
+                "select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score from\n" +
                 "    ( \n" +
-                "    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase, user from\n" +
+                "    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, " +
+                        "sum(is_phrase) as is_phrase, user, bit_or(important) as important from" +
                 "    ( \n"
         );
 
@@ -182,11 +201,11 @@ public class QueryResultsFetcher {
                 ") t\n" +
                 "    left join history h on t.page_id = h.page and user = ? \n" +
                 "    group by page_id, user\n" +
-                "    order by user desc, is_phrase desc, total_relevance desc\n" +
+                "    order by user desc, important desc, is_phrase desc, total_relevance desc" +
                 "    limit ? , ?" +
                 "    ) r\n" +
                 "join page p on p.id = r.page_id\n" +
-                "order by user desc, is_phrase desc, score desc"
+                "order by user desc, important desc, is_phrase desc, score desc"
         );
 
         PreparedStatement statement = connection.prepareStatement(query.toString());
@@ -212,7 +231,8 @@ public class QueryResultsFetcher {
 
         String query;
         query =
-                "select wi.page_id,SUM((1 + log(count)) * idf + important) as relevance, group_concat(position) as indices, 0 as is_phrase\n" +
+                "select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, " +
+                        "0 as is_phrase, BIT_OR(important) as important\n" +
                 "from page p\n" +
                 "join word_index wi on wi.page_id = p.id\n" +
                 "join word w on wi.word_id = w.id\n" +
@@ -230,6 +250,7 @@ public class QueryResultsFetcher {
     private int setWordsRelevanceQueryParameters(List<String> words,
                                                  PreparedStatement statement,
                                                  int paramIdx) throws SQLException {
+        System.out.println("hi");
         statement.setInt(paramIdx++, PageRanker.pagesCount);
         for (String word : words)
             statement.setString(paramIdx++, word);
@@ -241,7 +262,7 @@ public class QueryResultsFetcher {
         int phraseWordsCount = phraseWords.size();
 
         String coreTableQuery =
-                "select wi.page_id, word, wp.position from word_index wi \n" +
+                "select wi.page_id, word, important, wp.position from word_index wi \n" +
                 " join word w on w.id = wi.word_id\n" +
                 " join word_positions wp \n" +
                 " on wi.word_id = wp.word_id and wi.page_id = wp.page_id \n";
@@ -249,7 +270,8 @@ public class QueryResultsFetcher {
         String coreTableJoin = "join ( " + coreTableQuery + ") t? on t1.page_id = t?.page_id \n";
 
         String termFrequencyTableQuery =
-                "select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices\n" +
+                "select t1.page_id, 1 + log(count(*)) as tf, group_concat(t1.position) as indices," +
+                    "bit_or( t1.important " + "and t?.important ".repeat(phraseWordsCount - 1) + ") as important\n" +
                 "from ( " + coreTableQuery + " ) t1\n" + coreTableJoin.repeat(phraseWordsCount - 1) +
                 "where (t1.word = ? " + " and t?.word = ? ".repeat(phraseWordsCount - 1) +
                 "and t?.position - t?.position = 1 ".repeat(phraseWordsCount - 1) + ")\n" +
@@ -257,7 +279,8 @@ public class QueryResultsFetcher {
 
         String query;
         query =
-             "select page_id, log(1 + (?/phrase_count)) * tf as relevance, indices, 1 as is_phrase from\n" +
+             "select page_id, log(1 + ( ? /phrase_count)) * tf as relevance, indices," +
+                     " 1 as is_phrase, important from\n" +
              "(select count(*) as phrase_count from (\n" + termFrequencyTableQuery + ") t \n" +
              ") t1,\n" +
              "(\n" + termFrequencyTableQuery +
@@ -276,6 +299,10 @@ public class QueryResultsFetcher {
         // The same parameters are repeated twice
         for(int count = 1; count <= 2; count++) {
             // Set join mainTableJoin parameters
+            for (int idx = 2; idx <= phraseWordsCount ; idx++) {
+                statement.setInt(paramIdx++, idx);
+            }
+
             for (int idx = 2; idx <= phraseWordsCount ; idx++) {
                 statement.setInt(paramIdx++, idx);
                 statement.setInt(paramIdx++, idx);
