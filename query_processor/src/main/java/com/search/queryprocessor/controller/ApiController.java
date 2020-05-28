@@ -6,15 +6,12 @@ import com.search.queryprocessor.entity.User;
 import com.search.queryprocessor.repository.QueryRepository;
 import com.search.queryprocessor.utils.Stemmer;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
-import org.tartarus.snowball.ext.EnglishStemmer;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import ranker.QueryResultsFetcher;
 
 @RestController
 @CrossOrigin("*")
@@ -22,6 +19,8 @@ public class ApiController {
 
     private final QueryRepository repository;
     Stemmer stemmer = new Stemmer();
+    QueryResultsFetcher fetcher = new QueryResultsFetcher();
+
 
     @Autowired
     JdbcTemplate jdbcTemplate;
@@ -80,8 +79,8 @@ public class ApiController {
 
     @ResponseBody
     @RequestMapping(method = RequestMethod.GET, value = "/api/v1/get-results")
-    public int getResults(@RequestParam(name = "text") String text, @RequestParam(name = "page") int page,
-                          @RequestParam(name = "user") int user ) {
+    public List<QueryResultsFetcher.Page> getResults(@RequestParam(name = "text") String text, @RequestParam(name = "page") int page,
+                                                     @RequestParam(name = "user") int user ) {
         System.out.println(text);
         text = text.replace("\"", " \" ");
 
@@ -117,8 +116,10 @@ public class ApiController {
             for (int j = 0; j < impPhraseWords.get(i).size(); j++)
                 System.out.println(impPhraseWords.get(i).get(j));
         }
-
-        return user;
+        //return 5;
+        List<QueryResultsFetcher.Page> r = fetcher.getQueryResults(user, impWords, impPhraseWords, 0, 20);
+        System.out.println((r.get(0)).title);
+        return r;
     }
 
     @ResponseBody
