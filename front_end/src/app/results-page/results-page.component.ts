@@ -89,13 +89,17 @@ export class ResultsPageComponent implements OnInit {
       this.apiService.getImages(this.value,this.page,localStorage.getItem('id')).subscribe(data => {
         this.results = null
         this.images = null
-        if(data.length > 0){
-          this.images = data;
-          if(this.images.length < 20)
-            this.next = false;
-          else
-            this.next = true
+        if(data){
+          if(data.length > 0){
+            this.images = data;
+            if(this.images.length < 20)
+              this.next = false;
+            else
+              this.next = true
+          }
           console.log(this.images)
+          this.next = false;
+          this.loading = false
         }      
         else {
           this.next = false;
@@ -107,13 +111,17 @@ export class ResultsPageComponent implements OnInit {
       this.apiService.getResults(this.value,this.page,localStorage.getItem('id')).subscribe(data => {
         this.results = null
         this.images = null
-        if(data.length > 0){
-          this.results = data;
-          if(this.results.length < 20)
-            this.next = false;
-          else
-            this.next = true
+
+        if(data != null) {
+          if(data.length > 0 ){
+            this.results = data;
+            if(this.results.length < 20)
+              this.next = false;
+            else
+              this.next = true
+          }
           console.log(this.results)
+          this.next = false;
           this.loading = false
         }
         else {
@@ -127,7 +135,9 @@ export class ResultsPageComponent implements OnInit {
   }
 
   Search() {
+    console.log("preshit")
     if(this.value.replace(/\s/g, '') != ""){
+      console.log("shit")
       this.imageSearch = false;
       this.apiService.saveQuery(this.value).subscribe(data => {
       });
@@ -215,5 +225,6 @@ export class ResultsPageComponent implements OnInit {
 
     }
   }
+
 }
 }

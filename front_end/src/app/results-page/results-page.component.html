@@ -2,12 +2,13 @@
     <img src="../../assets/spidey2.png" id="img1">
     <span id="name">Spidey</span>
 
-    <form id="formfield">
+    <div id="formfield">
         <input type="text"
         placeholder=""
         id="searchbox"
         (input)="Suggestions($event.target.value)"
         [(ngModel)] = "value"
+        (keyup.enter)="Search()"
         [formControl]="control"
         [matAutocomplete]="auto">
         <mat-autocomplete #auto="matAutocomplete">
@@ -28,7 +29,7 @@
             <mat-icon [ngStyle]="{'color': listening ? 'red' : nochange}">mic</mat-icon>
         </button>
 
-    </form>
+    </div>
     <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="nightMode()" id="night">
         <mat-icon [ngStyle]="{'color': night ? nochange : 'white'}">brightness_3</mat-icon>
     </button>

@@ -4,12 +4,14 @@
     <img *ngIf="!night" src="../../assets/spidey.png" id="img">
 
 
-    <form id="formfield">
+    <div id="formfield">
         <input type="text"
         placeholder=""
         (input)="Suggestions($event.target.value)"
         id="searchbox"
         [(ngModel)] = "value"
+        (keyup.enter)="search()"
+        (keydown.enter)="search()"
         [formControl]="control"
         [matAutocomplete]="auto">
         <mat-autocomplete #auto="matAutocomplete">
@@ -23,7 +25,7 @@
         <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="listen()">
             <mat-icon [ngStyle]="{'color': listening ? 'red' : nochange}">mic</mat-icon>
         </button>
-    </form>
+    </div>
 
     <button mat-raised-button color="primary" id="btn" (click)='search()'>Search</button>
     <button mat-raised-button color="primary" id="btn" (click)='imSearch()'>Images</button>
