@@ -6,16 +6,14 @@ import { startWith, map } from 'rxjs/operators';
 import { Result } from '../common/result';
 import { Routes, RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../services/api.service';
-import {
-  RxSpeechRecognitionService,
-  resultList,
-} from '@kamiazya/ngx-speech-recognition';
+import { IWindow } from '../home/home.component'
+const { webkitSpeechRecognition }: IWindow = (window as any) as IWindow;
+
 import { AppComponent } from '../app.component';
 
 @Component({
   selector: 'app-results-page',
   templateUrl: './results-page.component.html',
-  providers: [RxSpeechRecognitionService],
   styleUrls: ['./results-page.component.scss']
 })
 export class ResultsPageComponent implements OnInit {
@@ -31,10 +29,9 @@ export class ResultsPageComponent implements OnInit {
   imageSearch = false;
   page: number;
   next = false;
-  recognition = new SpeechRecognition
+  recognition = new webkitSpeechRecognition;
 
   constructor(private apiService: ApiService,
-      public service: RxSpeechRecognitionService,
       private route: ActivatedRoute,
       private router: Router) {
 
@@ -78,7 +75,7 @@ export class ResultsPageComponent implements OnInit {
       console.log("data saved to local storage = " +  localStorage.getItem('nightMode'))
     }
 
-    if (typeof SpeechRecognition === "undefined") {
+    if (typeof webkitSpeechRecognition === "undefined") {
       console.log("error")
     } else {
       this.recognition.continuous = true;

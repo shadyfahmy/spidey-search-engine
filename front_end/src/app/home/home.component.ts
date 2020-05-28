@@ -3,16 +3,12 @@ import {FormControl} from '@angular/forms';
 import {Observable} from 'rxjs';
 import { Routes, RouterModule, Router, ActivatedRoute } from '@angular/router';
 import {map, startWith} from 'rxjs/operators';
-import {
-  RxSpeechRecognitionService,
-  resultList,
-} from '@kamiazya/ngx-speech-recognition';
-import { ApiService } from '../services/api.service';
 
+import { ApiService } from '../services/api.service';
+const { webkitSpeechRecognition }: IWindow = (window as any) as IWindow;
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
-  providers: [RxSpeechRecognitionService],
   styleUrls: ['./home.component.scss']
 })
 export class HomeComponent implements OnInit {
@@ -23,10 +19,10 @@ export class HomeComponent implements OnInit {
   value = "";
   listening = false;
   night = false;
-  recognition = new SpeechRecognition
+  
+  recognition = new webkitSpeechRecognition;
 
   constructor( private route: ActivatedRoute, private router: Router,
-     public service: RxSpeechRecognitionService,
      private apiService: ApiService ) { }
 
   ngOnInit() {
@@ -59,7 +55,7 @@ export class HomeComponent implements OnInit {
       console.log("data saved to local storage = " +  localStorage.getItem('nightMode'))
     }
 
-    if (typeof SpeechRecognition === "undefined") {
+    if (typeof webkitSpeechRecognition === "undefined") {
       console.log("error")
     } else {
       this.recognition.continuous = true;
@@ -127,4 +123,7 @@ export class HomeComponent implements OnInit {
       localStorage.setItem('nightMode', "false")
   }
 
+}
+export interface IWindow extends Window {
+  webkitSpeechRecognition: any;
 }
