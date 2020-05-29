@@ -21,6 +21,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import static crawler.Crawler.normalizeUrl;
 import java.util.Queue;
+import me.tongfei.progressbar.*;
+import ranker.PageRanker;
 
 
 public class Indexer implements Runnable {
@@ -31,6 +33,7 @@ public class Indexer implements Runnable {
 	private static List<String> pages;
 	private static HashMap<Integer, Integer> pagesState = new HashMap<>();
 	private static HashMap<String, Integer> pageURLToID = new HashMap<>();
+	private static ProgressBar pb;
 
 	public enum States {SKIP, CRAWL, RECRAWL}
 
@@ -38,7 +41,7 @@ public class Indexer implements Runnable {
 	private static int countIndexed;
 	private static Connection connection;
 	private static boolean commitThread = true, imageThread = true;
-
+	private static HashMap<String, Integer> globalWordsIDs = new HashMap<>();
 	private class Image {
 		public String description;
 		public String url;
@@ -71,7 +74,7 @@ public class Indexer implements Runnable {
 					int imageID = -1;
 					boolean skipRecrawlDeletion = false;
 					HashMap<String, Boolean> wordsMap = new HashMap<>();
-					String[] words = image.description.split("[^\\\\s\\w\\u0600-\\u06FF]");
+					String[] words = image.description.split("[^\\\\s\\w\\u0600-\\u06FF]|[\\\\]");
 					ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
 					int wordsListSize = wordsList.size();
 					EnglishStemmer stemmer = new EnglishStemmer();
@@ -165,7 +168,14 @@ public class Indexer implements Runnable {
 		int threadNumber = Integer.valueOf(Thread.currentThread().getName());
 		if (threadNumber == THREADS_COUNT) {
 			while (commitThread || commitOrder.peek() != null) {
-				Boolean commit = commitOrder.poll();
+                try {
+                    Thread.sleep(1000);
+                    if(actualPagesCount > 0)
+						pb.stepTo(countIndexed);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                Boolean commit = commitOrder.poll();
 				if (commit != null) {
 					try {
 						connection.commit();
@@ -207,7 +217,7 @@ public class Indexer implements Runnable {
 				} else
 					continue;
 				String title = doc.title();
-				title = title.substring(0, Math.min(title.length(), 254));
+				title = title.substring(0, Math.min(title.length(), 250));
 				Elements metaTags = doc.getElementsByTag("meta");
 				HashMap<String, String> metas = new HashMap<>();
 
@@ -218,7 +228,7 @@ public class Indexer implements Runnable {
 				}
 				String description = metas.get("description");
 				if (description != null)
-					description = description.substring(0, Math.min(description.length(), 254));
+					description = description.substring(0, Math.min(description.length(), 250));
 
 				Elements links = doc.select("a[href]");
 				ArrayList<Integer> pagesMentioned = new ArrayList<>();
@@ -232,7 +242,6 @@ public class Indexer implements Runnable {
 							if (mentionedPageID != thisPageID) {
 								pagesMentioned.add(mentionedPageID);
 							}
-
 						}
 					}
 				}
@@ -241,7 +250,7 @@ public class Indexer implements Runnable {
 					if (!(element.attr("alt") == null || element.attr("alt").equals(""))) {
 						Image image = new Image();
 						image.description = element.attr("alt");
-						image.description = image.description.substring(0, Math.min(image.description.length(), 254));
+						image.description = image.description.substring(0, Math.min(image.description.length(), 250));
 						image.url = element.attr("abs:src");
 						if(image.url.equals("") || !image.url.startsWith("http"))
 							continue;
@@ -257,7 +266,7 @@ public class Indexer implements Runnable {
 				HashMap<String, Boolean> importantWords = new HashMap<String, Boolean>();
 				//System.out.println(Arrays.toString(importantTags.toArray()));
 				for (int i = 0; i < importantTags.size(); i++) {
-					String[] words = importantTags.get(i).split("[^\\\\s\\w\\u0600-\\u06FF]");
+					String[] words = importantTags.get(i).split("[^\\\\s\\w\\u0600-\\u06FF]|[\\\\]");
 					ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
 					int wordsListSize = wordsList.size();
 					for (int j = 0; j < wordsListSize; j++) {
@@ -286,10 +295,12 @@ public class Indexer implements Runnable {
 				}
 
 
-				String[] words = doc.text().split("[^\\\\s\\w\\u0600-\\u06FF]");
+				String[] words = doc.text().split("[^\\\\s\\w\\u0600-\\u06FF]|[\\\\]");
 				ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
 				HashMap<String, Integer> hm = new HashMap<String, Integer>();
 				HashMap<String, String> hmIndices = new HashMap<String, String>();
+
+				String superQ = "";
 
 				File textFile;
 				BufferedWriter writer;
@@ -346,6 +357,8 @@ public class Indexer implements Runnable {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+
+
 				//Database Access
 				try {
 					PreparedStatement pst;
@@ -364,7 +377,6 @@ public class Indexer implements Runnable {
 					pst.setString(3, formatter.format(now));
 					pst.setInt(4, thisPageID);
 					pst.executeUpdate();
-
 					//Recrawling Logic
 					if (recrawl) {
 						sql = "DELETE FROM page_connections WHERE from_page_id = ?";
@@ -375,28 +387,16 @@ public class Indexer implements Runnable {
 						pst = connection.prepareStatement(sql);
 						pst.setInt(1, thisPageID);
 						pst.executeUpdate();
-						sql = "SELECT word.word as word, word_index.word_id as word_id, word.pages_count as pages_count FROM word INNER JOIN word_index ON word.id=word_index.word_id WHERE word_index.page_id = ?;";
+
+
+						sql = "UPDATE word INNER JOIN word_index ON word.id = word_index.word_id SET word.pages_count = word.pages_count - 1 WHERE word_index.page_id  = ? AND word.pages_count > 0;";
 						pst = connection.prepareStatement(sql);
 						pst.setInt(1, thisPageID);
-						rs = pst.executeQuery();
-						while (rs.next()) {
-							String word = rs.getString("word");
-							if (!hm.containsKey(word)) {
-								int wordID = rs.getInt("word_id");
-								int pagesCountDB = rs.getInt("pages_count");
-								pagesCountDB--;
-								sql = "UPDATE word SET pages_count = ? WHERE id = ?";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1, pagesCountDB);
-								pst.setInt(2, wordID);
-								pst.executeUpdate();
-								sql = "DELETE FROM word_index WHERE page_id = ? and word_id = ?";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1, thisPageID);
-								pst.setInt(1, wordID);
-								pst.executeUpdate();
-							}
-						}
+						pst.executeUpdate();
+						sql = "DELETE FROM word_index WHERE page_id = ?";
+						pst = connection.prepareStatement(sql);
+						pst.setInt(1, thisPageID);
+						pst.executeUpdate();
 
 					}
 
@@ -414,120 +414,125 @@ public class Indexer implements Runnable {
 //					synchronized (dbManager) {
 
 					//Populate word_index and word tables
+					long start = System.currentTimeMillis();
+					sql = "SELECT ";
+					boolean first = true;
+					HashMap<String, Integer> wordsIDs = new HashMap<>();
+					HashMap<String, Boolean> neededWordsIDs = new HashMap<>();
+					Integer wordID;
+					Queue<String> newWordsQueue = new LinkedList<>();
 					for (HashMap.Entry<String, Integer> entry : hm.entrySet()) {
-						boolean importantHM = importantWords.containsKey(entry.getKey());
-						sql = "SELECT id FROM word WHERE (word = ?)";
-						pst = connection.prepareStatement(sql);
-						pst.setString(1, entry.getKey());
-						rs = pst.executeQuery();
-						if (rs.next()) {    //exists
-							int wordID = rs.getInt("id");
-							//check if there exists an index of this word in this page
-							sql = "SELECT * FROM word_index WHERE (page_id = ? AND word_id = ?)";
-							pst = connection.prepareStatement(sql);
-							pst.setInt(1, thisPageID);
-							pst.setInt(2, wordID);
-							rs = pst.executeQuery();
-							if (rs.next()) {    //exists
-								int countDB = rs.getInt("count");
-								boolean importantDB = rs.getBoolean("important");
-								if (countDB != entry.getValue() || importantDB != importantHM) {
-									sql = "UPDATE word_index SET count = ?, important = ? WHERE (word_id = ? AND page_id = ?)";
-									pst = connection.prepareStatement(sql);
-									pst.setInt(1, entry.getValue());
-									pst.setBoolean(2, importantHM);
-									pst.setInt(3, wordID);
-									pst.setInt(4, thisPageID);
-									pst.executeUpdate();
-								}
+						synchronized (globalWordsIDs) {
+							if (globalWordsIDs.containsKey(entry.getKey())) {
+								wordsIDs.put(entry.getKey(), globalWordsIDs.get(entry.getKey()));
 							} else {
-								sql = "INSERT INTO word_index (page_id, word_id, count, important) VALUES (?, ?, ?, ?);";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1, thisPageID);
-								pst.setInt(2, wordID);
-								pst.setInt(3, entry.getValue());
-								pst.setBoolean(4, importantHM);
-								pst.executeUpdate();
-								sql = "SELECT * FROM word WHERE id = ?";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1, wordID);
-								ResultSet rs2 = pst.executeQuery();
-								if (rs2.next()) {
-									int pages_count = rs2.getInt("pages_count");
-									pages_count++;
-									sql = "UPDATE word SET pages_count = ? WHERE id = ?";
-									pst = connection.prepareStatement(sql);
-									pst.setInt(1, pages_count);
-									pst.setInt(2, wordID);
-									pst.executeUpdate();
-								}
+								neededWordsIDs.put(entry.getKey(), true);
 							}
-							String indices = hmIndices.get(entry.getKey());
-							String[] wordPositions = indices.split("[,]");
-							ArrayList<String> wordPositionsList = new ArrayList<String>(Arrays.asList(wordPositions));
-							int wordPositionsSize = wordPositionsList.size();
-							sql = "INSERT IGNORE INTO word_positions (page_id, word_id, position) VALUES (?, ?, ?);";
-							pst = connection.prepareStatement(sql);
-							for (int i = 0; i < wordPositionsSize; i++) {
-								if (wordPositionsList.get(i).contentEquals(""))
-									continue;
-								pst.setInt(1, thisPageID);
-								pst.setInt(2, wordID);
-								pst.setInt(3, Integer.valueOf(wordPositionsList.get(i)));
-								pst.addBatch();
-							}
-							pst.executeBatch();
-						} else {    //does not exist
-							sql = "INSERT INTO word (word, pages_count) VALUES (?, 1)";
-							pst = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-							pst.setString(1, entry.getKey());
-							pst.executeUpdate();
-							rs = pst.getGeneratedKeys();
-							if (rs != null && rs.next()) {
-								int wordID = rs.getInt(1);
-								sql = "INSERT INTO word_index (page_id, word_id, count, important) VALUES (?, ?, ?, ?);";
-								pst = connection.prepareStatement(sql);
-								pst.setInt(1, thisPageID);
-								pst.setInt(2, wordID);
-								pst.setInt(3, entry.getValue());
-								pst.setBoolean(4, importantHM);
-								pst.executeUpdate();
+						}
+					}
 
-								String indices = hmIndices.get(entry.getKey());
-								String[] wordPositions = indices.split("[,]");
-								ArrayList<String> wordPositionsList = new ArrayList<String>(Arrays.asList(wordPositions));
-								int wordPositionsSize = wordPositionsList.size();
-								sql = "INSERT IGNORE INTO word_positions (page_id, word_id, position) VALUES (?, ?, ?);";
-								pst = connection.prepareStatement(sql);
-								for (int i = 0; i < wordPositionsSize; i++) {
-									if (wordPositionsList.get(i).contentEquals(""))
-										continue;
-									pst.setInt(1, thisPageID);
-									pst.setInt(2, wordID);
-									pst.setInt(3, Integer.valueOf(wordPositionsList.get(i)));
-									pst.addBatch();
+					synchronized (dbManager) {
+						for (HashMap.Entry<String, Boolean> entry : neededWordsIDs.entrySet()) {
+							synchronized (globalWordsIDs) {
+								if (globalWordsIDs.containsKey(entry.getKey())) {
+									wordsIDs.put(entry.getKey(), globalWordsIDs.get(entry.getKey()));
+									continue;
 								}
-								pst.executeBatch();
 							}
+							if (!first)
+								sql = sql + ',';
+							else
+								first = false;
+
+							String prepText = " (SELECT id FROM word  WHERE  word = '" + entry.getKey() + "')AS table_" + entry.getKey();
+							sql = sql + prepText;
+						}
+						if(!first) {
+							superQ = sql;
+							pst = connection.prepareStatement(sql);
+							rs = pst.executeQuery();
+							rs.next();
+							sql = "INSERT INTO word (word, pages_count) VALUES (?, 0)";
+							pst = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+
+							for (HashMap.Entry<String, Boolean> entry : neededWordsIDs.entrySet()) {
+								if (globalWordsIDs.containsKey(entry.getKey()))
+									continue;
+								wordID = rs.getInt("table_" + entry.getKey());
+								if (!rs.wasNull()) {
+									wordsIDs.put(entry.getKey(), wordID);
+								} else {
+
+									pst.setString(1, entry.getKey());
+									pst.addBatch();
+									newWordsQueue.add(entry.getKey());
+
+								}
+							}
+//						System.out.println(p + " " + (System.currentTimeMillis()-start)/1000);
+							pst.executeBatch();
+							rs = pst.getGeneratedKeys();
+							while (rs != null && rs.next()) {
+								wordID = rs.getInt(1);
+								String word = newWordsQueue.poll();
+								if (word != null) {
+									synchronized (globalWordsIDs) {
+										globalWordsIDs.put(word, wordID);
+									}
+									wordsIDs.put(word, wordID);
+
+
+								} else
+									throw new Exception("words queue failed");
+							}
+						}
+					}
+					if(hm.size() != wordsIDs.size())
+						throw new Exception("words queue failed");
+
+					sql = "INSERT INTO word_index (page_id, word_id, count, important) VALUES (?, ?, ?, ?);";
+					pst = connection.prepareStatement(sql);
+					String sql2 = "INSERT IGNORE INTO word_positions (page_id, word_id, position) VALUES (?, ?, ?);";
+					PreparedStatement pst2 = connection.prepareStatement(sql2);
+					for (HashMap.Entry<String, Integer> entry : hm.entrySet()) {
+						pst.setInt(1, thisPageID);
+						pst.setInt(2, wordsIDs.get(entry.getKey()));
+						pst.setInt(3, entry.getValue());
+						pst.setBoolean(4, importantWords.containsKey(entry.getKey()));
+						pst.addBatch();
+
+						String indices = hmIndices.get(entry.getKey());
+						String[] wordPositions = indices.split("[,]");
+						ArrayList<String> wordPositionsList = new ArrayList<>(Arrays.asList(wordPositions));
+						int wordPositionsSize = wordPositionsList.size();
+						for (int i = 0; i < wordPositionsSize; i++) {
+							if (wordPositionsList.get(i).contentEquals(""))
+								continue;
+							pst2.setInt(1, thisPageID);
+							pst2.setInt(2, wordsIDs.get(entry.getKey()));
+							pst2.setInt(3, Integer.valueOf(wordPositionsList.get(i)));
+							pst2.addBatch();
 
 						}
-
-
 					}
-//						connection.commit();
-					synchronized (dbManager) {
+					pst.executeBatch();
+					pst2.executeBatch();
+					sql = "UPDATE word INNER JOIN word_index ON word.id = word_index.word_id SET word.pages_count = word.pages_count + 1 WHERE word_index.page_id  = ?;";
+					pst = connection.prepareStatement(sql);
+					pst.setInt(1, thisPageID);
+					pst.executeUpdate();
+
+					synchronized (commitOrder) {
 						{
 							countIndexed++;
 							if (countIndexed % 10 == 9)
 								commitOrder.add(true);						}
 					}
 
-//					}
-					if (!recrawl)
-						System.out.println("Indexed: " + countIndexed + "/" + actualPagesCount);
-
 				} catch (Exception e) {
 					e.printStackTrace();
+					System.out.println(superQ);
 				}
 
 
@@ -540,7 +545,6 @@ public class Indexer implements Runnable {
 		countIndexed = 0;
 		commitThread = true;
 		imageThread = true;
-		long start = System.currentTimeMillis();
 		dbManager = new DatabaseManager();
 		Connection initialConnection = dbManager.getDBConnection();
 		try (Stream<Path> walk = Files.walk(Paths.get("html_docs/"))) {
@@ -555,6 +559,12 @@ public class Indexer implements Runnable {
 			e.printStackTrace();
 		}
 		initializePages(initialConnection);
+		if(actualPagesCount > 0)
+		{
+			pb = new ProgressBar("Indexing", actualPagesCount); // name, initial max
+			pb.start();
+		}
+
 		connection = initialConnection;
 		List<Thread> threads = new ArrayList<>();
 		for (int i = 0; i < THREADS_COUNT && i < pagesCount; i++) {
@@ -573,7 +583,7 @@ public class Indexer implements Runnable {
 		tCommit.setName(Integer.toString(THREADS_COUNT));
 		tCommit.start();
 		List<Thread> threadsImages = new ArrayList<>();
-		for(int i = THREADS_COUNT+1; i < (int)(1.5*THREADS_COUNT);i++)
+		for(int i = THREADS_COUNT+1; i < (int)(1.25*THREADS_COUNT);i++)
 		{
 			Thread tImage = new Thread(new Indexer(dbManager));
 			tImage.setName(Integer.toString(i));
@@ -587,15 +597,8 @@ public class Indexer implements Runnable {
 
 			}
 			imageThread = false;
-			while(true)
-			{
-				if(images.size() == 0)
-					break;
-				System.out.println("Waiting for Image indexing to finish, "+ images.size() + " images remaining");
-				Thread.sleep(5000);
-			}
-			for (int i = THREADS_COUNT + 1; i < (int) 1.5 * THREADS_COUNT; i++) {
-				threadsImages.get(i).join();
+			for (int i = THREADS_COUNT + 1; i < (int) (1.25 * THREADS_COUNT); i++) {
+				threadsImages.get(i - THREADS_COUNT - 1).join();
 			}
 			commitThread = false;
 		}catch (InterruptedException e) {
@@ -603,13 +606,17 @@ public class Indexer implements Runnable {
 		}
 
 		try {
-			connection.commit();
 			tCommit.join();
-		} catch (Exception e) {
+            connection.commit();
+            if(actualPagesCount > 0)
+			{
+				pb.stop();
+				System.out.println(globalWordsIDs.size());
+				PageRanker.getInstance().timedUpdatePageRanks();
+			}
+        } catch (Exception e) {
 			e.printStackTrace();
 		}
-
-		System.out.println("Total runtime : " + (System.currentTimeMillis() - start) / 1000 + " seconds.");
 
 	}
 

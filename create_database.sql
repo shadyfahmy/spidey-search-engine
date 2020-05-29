@@ -13,8 +13,8 @@ create table page (
 	url text not null,
 	crawled_time tinytext not null,
 	indexed_time tinytext default null,
-	title tinytext default null,
-	description tinytext default null,
+	title text default null,
+	description text default null,
 	page_rank float,
 	primary key (id)
 );
@@ -108,7 +108,7 @@ drop table if exists image;
 create table image (
 	id serial,
 	url text not null,
-	description tinytext default null,
+	description text default null,
 	primary key (id)
 );
 drop table if exists word_index_image;
