@@ -43,7 +43,8 @@ create table word (
 	id serial,
 	word varchar(500) not null,
 	pages_count int unsigned not null,
-	primary key (id)
+	primary key (id),
+	INDEX USING HASH (word)
 );
 
 drop table if exists word_index;
@@ -100,7 +101,8 @@ create table word_image (
 	id serial,
 	word varchar(500) not null,
 	images_count int unsigned not null,
-	primary key (id)
+	primary key (id),
+	INDEX USING HASH (word)
 );
 
 drop table if exists image;

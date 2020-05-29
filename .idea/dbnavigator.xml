@@ -23,7 +23,11 @@
     <autoscroll-to-editor value="false" />
     <autoscroll-from-editor value="true" />
     <show-object-properties value="true" />
-    <loaded-nodes />
+    <loaded-nodes>
+      <connection connection-id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
+        <schema name="test_search_engine" object-types="table, function, view, column" />
+      </connection>
+    </loaded-nodes>
   </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="49c1d82b-e6fb-495f-8886-9d4d06056eb3">
@@ -39,8 +43,8 @@ join word_index wi on wi.page_id = p.id
 join word w on wi.word_id = w.id
 join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
 join (
-    select word_id, log(1 + (10/ y)) as idf from 
-    (select id as word_id, pages_count as y from word where word ='about' or word = 'your') as t2
+    select id as word_id, log(1 + (10/ pages_count)) as idf 
+    from word where word ='article' or word = 'home'
 ) t on t.word_id = w.id
 group by page_id
 
@@ -212,27 +216,10 @@ select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank
 join page p on p.id = r.page_id
 order by user desc, important desc, is_phrase desc, score desc;
 
+create index fefe on word(word) using hash
 
 -- TEST
-select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score from
-    ( 
-    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase, user, bit_or(important) as important from    ( 
-select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, 0 as is_phrase, BIT_OR(important) as important
-from page p
-join word_index wi on wi.page_id = p.id
-join word w on wi.word_id = w.id
-join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
-join (
-    select word_id, log(1 + (28 / y)) as idf from 
-    (select id as word_id, pages_count as y from word where word = 'reddit' or word = 'internet'  or word = 'english'  or word = 'web'  or word = 'googl'  or word = 'play'  or word = 'stop' ) as t2
-) t on t.word_id = w.id
-group by page_id
-) t
-    left join history h on t.page_id = h.page and user = 3 
-    group by page_id, user
-    order by user desc, important desc, is_phrase desc, total_relevance desc    limit 0 , 5    ) r
-join page p on p.id = r.page_id
-order by user desc, important desc, is_phrase desc, score desc]]></console>
+select * from image]]></console>
       <console name="Test" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select * from word_index]]></console>
     </connection>
   </component>

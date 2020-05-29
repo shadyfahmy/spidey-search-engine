@@ -10,7 +10,7 @@ import java.util.HashSet;
 // Assuming page ids are continuous
 public class PageRanker {
     private final DatabaseManager dbManager;
-    private Connection connection;
+    private Connection dbConnection;
     private int startingID;
 
     static int pagesCount;
@@ -25,6 +25,7 @@ public class PageRanker {
 
     private PageRanker() {
         dbManager = new DatabaseManager();
+        dbConnection = dbManager.getDBConnection();
     }
 
     public static PageRanker getInstance() {
@@ -49,7 +50,6 @@ public class PageRanker {
 
     public void updatePageRanks() {
         try {
-            connection = dbManager.getDBConnection();
             updatePagesMetadata();
             HashMap<Integer, HashSet<Integer>> pageConnections = getPageConnections();
             SimpleMatrix adjacencyMatrix = buildAdjacencyMatrix(pageConnections);
@@ -59,7 +59,6 @@ public class PageRanker {
             else
                 pageRanks = calcPageRanksIterative(adjacencyMatrix);
             savePageRanks(pageRanks);
-            connection.close();
         } catch (Exception ex) {
             System.out.println("Failed to calculate PageRank: Exception occurred.");
             ex.printStackTrace();
@@ -94,7 +93,7 @@ public class PageRanker {
         String query = "UPDATE page SET page_rank = CASE id"
                 + " WHEN ? THEN ?".repeat(pagesCount)
                 + " END";
-        PreparedStatement statement = connection.prepareStatement(query);
+        PreparedStatement statement = dbConnection.prepareStatement(query);
         for(int i = 0; i < pagesCount; i++) {
             statement.setInt(2*i+1, i + startingID);
             statement.setDouble(2*i+2, pageRanks.get(i, 0));
@@ -105,7 +104,7 @@ public class PageRanker {
 
     private HashMap<Integer, HashSet<Integer>> getPageConnections() throws SQLException {
         String query = "SELECT * FROM page_connections";
-        Statement statement = connection.createStatement();
+        Statement statement = dbConnection.createStatement();
         ResultSet result = statement.executeQuery(query);
         HashMap<Integer, HashSet<Integer>> outboundConnections = new HashMap<>(pagesCount);
         for (int pageID = startingID; pageID < pagesCount + startingID; pageID++) {
@@ -137,7 +136,7 @@ public class PageRanker {
 
     private void updatePagesMetadata() throws SQLException {
         String query = "SELECT COUNT(*), MIN(id) FROM page";
-        Statement statement = connection.createStatement();
+        Statement statement = dbConnection.createStatement();
         ResultSet result = statement.executeQuery(query);
         result.next();
         this.pagesCount = result.getInt(1);

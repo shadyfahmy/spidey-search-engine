@@ -18,8 +18,10 @@ import java.util.stream.Collectors;
 
 public class QueryResultsFetcher {
     private final DatabaseManager dbManager;
+    private final Connection dbConnection;
     final String text_docs_dir = "./txt_docs/";
     final int maxSnippets = 5;
+    final int snippetSize = 16;
 
     public static class Page {
         public int id;
@@ -35,7 +37,6 @@ public class QueryResultsFetcher {
         }
 
         void print() {
-            System.out.println(id);
             System.out.println(url);
             System.out.println(title);
             System.out.println(description);
@@ -56,47 +57,48 @@ public class QueryResultsFetcher {
 
         EnglishStemmer stemmer = new EnglishStemmer();
 
-//        stemmer.setCurrent("reddit");
-//        stemmer.stem();
-//        words.add(stemmer.getCurrent());
-//
-//        stemmer.setCurrent("internet");
-//        stemmer.stem();
-//        words.add(stemmer.getCurrent());
-//
-//        stemmer.setCurrent("english");
-//        stemmer.stem();
-//        words.add(stemmer.getCurrent());
-//
-//        stemmer.setCurrent("web");
-//        stemmer.stem();
-//        words.add(stemmer.getCurrent());
-//
-//        stemmer.setCurrent("google");
-//        stemmer.stem();
-//        words.add(stemmer.getCurrent());
-//
-//        stemmer.setCurrent("play");
-//        stemmer.stem();
-//        words.add(stemmer.getCurrent());
-//
-//        stemmer.setCurrent("stop");
-//        stemmer.stem();
-//        words.add(stemmer.getCurrent());
+        stemmer.setCurrent("true");
+        stemmer.stem();
+        words.add(stemmer.getCurrent());
+
+        stemmer.setCurrent("experience");
+        stemmer.stem();
+        words.add(stemmer.getCurrent());
+
+        stemmer.setCurrent("hero");
+        stemmer.stem();
+        words.add(stemmer.getCurrent());
+
+        stemmer.setCurrent("countries");
+        stemmer.stem();
+        words.add(stemmer.getCurrent());
+
 
         ArrayList<List<String>> phrases = new ArrayList<>();
 
         List<String> phrase = new ArrayList<>();
 
-        stemmer.setCurrent("learn");
+        stemmer.setCurrent("other");
         stemmer.stem();
         phrase.add(stemmer.getCurrent());
 
-        stemmer.setCurrent("anything");
+        stemmer.setCurrent("side");
         stemmer.stem();
         phrase.add(stemmer.getCurrent());
 
-        phrases.add(phrase);
+        //phrases.add(phrase);
+
+        List<String> phrase2 = new ArrayList<>();
+
+        stemmer.setCurrent("dark");
+        stemmer.stem();
+        phrase2.add(stemmer.getCurrent());
+
+        stemmer.setCurrent("knight");
+        stemmer.stem();
+        phrase2.add(stemmer.getCurrent());
+
+//        phrases.add(phrase2);
 
 
         List<Page> queryResults = queryResultsFetcher.getQueryResults(3, words, phrases, 0, 5);
@@ -104,10 +106,8 @@ public class QueryResultsFetcher {
     }
 
     public QueryResultsFetcher() {
-        // TODO: Move updating page ranks to the indexer
-        PageRanker pageRanker = PageRanker.getInstance();
-        pageRanker.timedUpdatePageRanks();
         dbManager = new DatabaseManager();
+        dbConnection = dbManager.getDBConnection();
     }
 
     public List<Page> getQueryResults(int userID, List<String> words, List<List<String>> phrases,
@@ -115,8 +115,7 @@ public class QueryResultsFetcher {
         try {
             long start = System.currentTimeMillis();
 
-            Connection connection = dbManager.getDBConnection();
-            PreparedStatement statement = getQueryStatement(connection, userID, words, phrases, offset, limit);
+            PreparedStatement statement = getQueryStatement(dbConnection, userID, words, phrases, offset, limit);
             ResultSet result = statement.executeQuery();
 
             List<Page> queryResults = new ArrayList<>();
@@ -131,9 +130,7 @@ public class QueryResultsFetcher {
                 }
                 queryResults.add(new Page(pageID, url, title, description));
             }
-
             statement.close();
-            connection.close();
 
             long end = System.currentTimeMillis();
             System.out.println("Query results fetched in " + (end - start) + " ms");
@@ -160,7 +157,7 @@ public class QueryResultsFetcher {
             for (Integer index : indices) {
                 snippets.append(
                         String.join(" ", words.subList(
-                                Math.max(0, index - 4), Math.min(words.size(), index + 4)
+                                Math.max(0, index - snippetSize / 2), Math.min(words.size(), index + snippetSize / 2)
                         ))
                 );
                 snippets.append("... ");
@@ -175,6 +172,7 @@ public class QueryResultsFetcher {
     private PreparedStatement getQueryStatement(Connection connection, int userID, List<String> words,
                                                 List<List<String>> phrases, int offset, int limit) throws SQLException {
         // Build query string
+
         StringBuilder query = new StringBuilder(
                 "select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score from\n" +
                 "    ( \n" +
@@ -184,7 +182,6 @@ public class QueryResultsFetcher {
         );
 
         boolean queryAdded = false;
-
         if (!words.isEmpty()) {
             query.append(generateWordsRelevanceQuery(words));
             queryAdded = true;
@@ -238,9 +235,8 @@ public class QueryResultsFetcher {
                 "join word w on wi.word_id = w.id\n" +
                 "join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id \n" +
                 "join (\n" +
-                "    select word_id, log(1 + (? / y)) as idf from \n" +
-                "    (select id as word_id, pages_count as y from word where word = ?" +
-                        " or word = ? ".repeat(wordsCount - 1) + ") as t2\n" +
+                "    select id as word_id, log(1 + ( ? / pages_count)) as idf \n" +
+                        "    from word where word = ? " + " or word = ? ".repeat(wordsCount - 1) +
                 ") t on t.word_id = w.id\n" +
                 "group by page_id\n";
 
@@ -250,7 +246,6 @@ public class QueryResultsFetcher {
     private int setWordsRelevanceQueryParameters(List<String> words,
                                                  PreparedStatement statement,
                                                  int paramIdx) throws SQLException {
-        System.out.println("hi");
         statement.setInt(paramIdx++, PageRanker.pagesCount);
         for (String word : words)
             statement.setString(paramIdx++, word);
@@ -340,8 +335,7 @@ public class QueryResultsFetcher {
                             "order by score desc \n" +
                             "limit ? , ?";
 
-            Connection connection = dbManager.getDBConnection();
-            PreparedStatement statement = connection.prepareStatement(query);
+            PreparedStatement statement = dbConnection.prepareStatement(query);
 
             int paramIdx = 1;
             for (String word : words)
@@ -359,7 +353,6 @@ public class QueryResultsFetcher {
             }
 
             statement.close();
-            connection.close();
 
             long end = System.currentTimeMillis();
             System.out.println("Image results fetched in " + (end - start) + " ms");
