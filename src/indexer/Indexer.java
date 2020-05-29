@@ -78,6 +78,7 @@ public class Indexer implements Runnable {
 					ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
 					int wordsListSize = wordsList.size();
 					EnglishStemmer stemmer = new EnglishStemmer();
+					image.description = image.description.replaceAll("[\\\\]","/");
 					for (int j = 0; j < wordsListSize; j++) {
 						String word = wordsList.get(j);
 						String stemmedWord;
@@ -608,10 +609,18 @@ public class Indexer implements Runnable {
 		try {
 			tCommit.join();
             connection.commit();
+            String sql = "SELECT id,word FROM word";
+            PreparedStatement pst = connection.prepareStatement(sql);
+            ResultSet rs = pst.executeQuery();
+			while(rs.next())
+			{
+				if(globalWordsIDs.containsKey(rs.getString("word")))
+					if(globalWordsIDs.get(rs.getString("word")) != rs.getInt("id"))
+						throw new Exception("global words are invalid, indexer's data are corrupted");
+			}
             if(actualPagesCount > 0)
 			{
 				pb.stop();
-				System.out.println(globalWordsIDs.size());
 				PageRanker.getInstance().timedUpdatePageRanks();
 			}
         } catch (Exception e) {
