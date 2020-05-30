@@ -41,7 +41,7 @@
 
     <div *ngIf="imageSearch" id="imgsContainer">
 
-        <mat-card id="result" *ngIf="results == null && loading == false" [ngStyle]="{'background-color': night ? '#00000017' : nochange, 'color': night ? 'white' : nochange, 'width':'50%'}"><mat-card-title>
+        <mat-card id="result" *ngIf="images == null && loading == false" [ngStyle]="{'background-color': night ? '#00000017' : nochange, 'color': night ? 'white' : nochange, 'width':'50%'}"><mat-card-title>
             No Results Found
         </mat-card-title></mat-card>
 
@@ -58,7 +58,7 @@
 
         <mat-card *ngFor=" let r of results " id="result" [ngStyle]="{'background-color': night ? '#00000017' : nochange, 'color': night ? 'white' : nochange}">
             <mat-card-title>
-            <a id="siteTitle" href={{r.link}} (click)="history(r.id)">{{r.title}}</a>
+            <a id="siteTitle" href={{r.url}} (click)="history(r.id)">{{r.title}}</a>
             </mat-card-title>
             <mat-card-content>{{r.description}}
             </mat-card-content>
