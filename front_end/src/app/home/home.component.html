@@ -11,7 +11,6 @@
         id="searchbox"
         [(ngModel)] = "value"
         (keyup.enter)="search()"
-        (keydown.enter)="search()"
         [formControl]="control"
         [matAutocomplete]="auto">
         <mat-autocomplete #auto="matAutocomplete">
