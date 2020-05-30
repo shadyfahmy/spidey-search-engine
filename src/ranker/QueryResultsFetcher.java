@@ -57,21 +57,21 @@ public class QueryResultsFetcher {
 
         EnglishStemmer stemmer = new EnglishStemmer();
 
-        stemmer.setCurrent("true");
+        stemmer.setCurrent("huffman");
         stemmer.stem();
         words.add(stemmer.getCurrent());
 
-        stemmer.setCurrent("experience");
-        stemmer.stem();
-        words.add(stemmer.getCurrent());
+//        stemmer.setCurrent("structures");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
 
-        stemmer.setCurrent("hero");
-        stemmer.stem();
-        words.add(stemmer.getCurrent());
-
-        stemmer.setCurrent("countries");
-        stemmer.stem();
-        words.add(stemmer.getCurrent());
+//        stemmer.setCurrent("hero");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
+//
+//        stemmer.setCurrent("countries");
+//        stemmer.stem();
+//        words.add(stemmer.getCurrent());
 
 
         ArrayList<List<String>> phrases = new ArrayList<>();
@@ -90,11 +90,11 @@ public class QueryResultsFetcher {
 
         List<String> phrase2 = new ArrayList<>();
 
-        stemmer.setCurrent("dark");
+        stemmer.setCurrent("sorting");
         stemmer.stem();
         phrase2.add(stemmer.getCurrent());
 
-        stemmer.setCurrent("knight");
+        stemmer.setCurrent("algorithms");
         stemmer.stem();
         phrase2.add(stemmer.getCurrent());
 
@@ -123,11 +123,10 @@ public class QueryResultsFetcher {
                 int pageID = result.getInt(1);
                 String  url = result.getString(2),
                         title = result.getString(3),
-                        description = result.getString(4),
                         indices = result.getString(5);
-                if(description == null) {
-                    description = getPageSnippets(pageID, getNumericIndices(indices, maxSnippets));
-                }
+
+                String description = getPageSnippets(pageID, getNumericIndices(indices, maxSnippets));
+
                 queryResults.add(new Page(pageID, url, title, description));
             }
             statement.close();
