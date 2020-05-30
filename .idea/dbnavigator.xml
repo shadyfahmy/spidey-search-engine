@@ -37,15 +37,19 @@ FROM   information_schema.tables
 WHERE  TABLE_SCHEMA = 'test_search_engine'
    AND TABLE_NAME = 'page_connections']]></console>
       <console name="QueryResultsFetcher" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[-- ALL WORDS RELEVANCE QUERY
-select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, 0 as is_phrase, BIT_OR(important) as important
-from page p
-join word_index wi on wi.page_id = p.id
-join word w on wi.word_id = w.id
-join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
-join (
-    select id as word_id, log(1 + (10/ pages_count)) as idf 
-    from word where word ='article' or word = 'home'
-) t on t.word_id = w.id
+select page_id, SUM(relevance) as relevance, group_concat(indices) as indices, is_phrase, sum(important) as important 
+from (
+    select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, 0 as is_phrase, BIT_OR(important) as important
+    from page p
+    join word_index wi on wi.page_id = p.id
+    join word w on wi.word_id = w.id
+    join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
+    join (
+        select id as word_id, log(1 + (10/ pages_count)) as idf 
+        from word where word ='sort' or word = 'algorithm'
+    ) t on t.word_id = w.id
+    group by page_id, wi.word_id
+) t 
 group by page_id
 
 
@@ -152,17 +156,21 @@ select page_id, (10/phrase_count) * tf as relevance, indices, 1 as is_phrase, im
 -- COMBINED QUERY
 select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score from
     (
-    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase, user, bit_or(important) as important from
+    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, sum(is_phrase) as is_phrase, user, sum(important) as important from
     (
-    select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, 0 as is_phrase, BIT_OR(important) as important
-    from page p
-    join word_index wi on wi.page_id = p.id
-    join word w on wi.word_id = w.id
-    join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
-    join (
-        select word_id, log(1 + (10/ y)) as idf from 
-        (select id as word_id, pages_count as y from word where word ='about' or word = 'your') as t2
-    ) t on t.word_id = w.id
+    select page_id, SUM(relevance) as relevance, group_concat(indices) as indices, is_phrase, sum(important) as important 
+    from (
+        select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, 0 as is_phrase, BIT_OR(important) as important
+        from page p
+        join word_index wi on wi.page_id = p.id
+        join word w on wi.word_id = w.id
+        join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
+        join (
+            select id as word_id, log(1 + (10/ pages_count)) as idf 
+            from word where word ='sort' or word = 'algorithm'
+        ) t on t.word_id = w.id
+        group by page_id, wi.word_id
+    ) t 
     group by page_id
     
     union
@@ -219,7 +227,34 @@ order by user desc, important desc, is_phrase desc, score desc;
 create index fefe on word(word) using hash
 
 -- TEST
-select * from state]]></console>
+select 
+select w.word, wi.page_id, bit_or(important) as important, sum((1 + log(count)) * idf) as relevance 
+from page p 
+join word_index wi on wi.page_id = p.id 
+join word w on wi.word_id = w.id 
+join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id  
+join ( 
+    select id as word_id, log(1 + (10/ pages_count)) as idf 
+    from word where word ='sort' or word = 'algorithm' 
+) t on t.word_id = w.id
+group by wi.page_id, w.word
+order by important desc
+
+select page_id, SUM(relevance) as relevance, group_concat(indices) as indices, is_phrase, sum(important) as important 
+from (
+    select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, 0 as is_phrase, BIT_OR(important) as important
+    from page p
+    join word_index wi on wi.page_id = p.id
+    join word w on wi.word_id = w.id
+    join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id 
+    join (
+        select id as word_id, log(1 + (10/ pages_count)) as idf 
+        from word where word ='sort' or word = 'algorithm'
+    ) t on t.word_id = w.id
+    group by page_id, wi.word_id
+) t 
+group by page_id
+order by important desc]]></console>
       <console name="Test" type="STANDARD" schema="test_search_engine" session="Main"><![CDATA[select * from word_index]]></console>
     </connection>
   </component>

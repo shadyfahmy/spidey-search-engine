@@ -57,15 +57,15 @@ public class QueryResultsFetcher {
 
         EnglishStemmer stemmer = new EnglishStemmer();
 
-        stemmer.setCurrent("huffman");
+        stemmer.setCurrent("sorting");
         stemmer.stem();
         words.add(stemmer.getCurrent());
 
-//        stemmer.setCurrent("structures");
-//        stemmer.stem();
-//        words.add(stemmer.getCurrent());
+        stemmer.setCurrent("algorithms");
+        stemmer.stem();
+        words.add(stemmer.getCurrent());
 
-//        stemmer.setCurrent("hero");
+//        stemmer.setCurrent("search");
 //        stemmer.stem();
 //        words.add(stemmer.getCurrent());
 //
@@ -176,7 +176,7 @@ public class QueryResultsFetcher {
                 "select p.id, p.url, p.title, p.description, indices, total_relevance * page_rank as score from\n" +
                 "    ( \n" +
                 "    select page_id, sum(relevance) as total_relevance, group_concat(indices) as indices, " +
-                        "sum(is_phrase) as is_phrase, user, bit_or(important) as important from" +
+                        "sum(is_phrase) as is_phrase, user, sum(important) as important from" +
                 "    ( \n"
         );
 
@@ -227,17 +227,21 @@ public class QueryResultsFetcher {
 
         String query;
         query =
-                "select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, " +
-                        "0 as is_phrase, BIT_OR(important) as important\n" +
-                "from page p\n" +
-                "join word_index wi on wi.page_id = p.id\n" +
-                "join word w on wi.word_id = w.id\n" +
-                "join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id \n" +
-                "join (\n" +
-                "    select id as word_id, log(1 + ( ? / pages_count)) as idf \n" +
-                        "    from word where word = ? " + " or word = ? ".repeat(wordsCount - 1) +
-                ") t on t.word_id = w.id\n" +
-                "group by page_id\n";
+                "select page_id, SUM(relevance) as relevance, group_concat(indices) as indices, is_phrase, sum(important) as important \n" +
+                "from (" +
+                    "select wi.page_id, SUM((1 + log(count)) * idf) as relevance, group_concat(position) as indices, " +
+                    "0 as is_phrase, BIT_OR(important) as important\n" +
+                    "from page p\n" +
+                    "join word_index wi on wi.page_id = p.id\n" +
+                    "join word w on wi.word_id = w.id\n" +
+                    "join word_positions wp on wp.word_id = wi.word_id and wp.page_id = wi.page_id \n" +
+                    "join (\n" +
+                    "    select id as word_id, log(1 + ( ? / pages_count)) as idf \n" +
+                            "    from word where word = ? " + " or word = ? ".repeat(wordsCount - 1) +
+                    ") t on t.word_id = w.id\n" +
+                    "group by page_id, wi.word_id \n" +
+                ") t \n" +
+                "group by page_id";
 
         return query;
     }
