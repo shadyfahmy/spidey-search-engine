@@ -36,28 +36,35 @@ public class Crawler implements Runnable {
         }
     };
 
+    // max number of website to crawl may be more but not less
     public static final int MAX_WEBSITES = 5000;
+    // start crawling time
     private final long startCrawlingTime = System.currentTimeMillis();
+    // number of threads to run
     private static final int numThreads = 20;
+    // seedset file for intail crawling
     public static final String seedSetFileName = "./src/crawler/SeedSet.txt";
+    // folder to download the crawled pages
     public static final String outputFolderBase = "./html_docs/";
 
-    public static final DatabaseManager dbManager = new DatabaseManager();
+    public static final DatabaseManager dbManager = new DatabaseManager(); // database manager instance
+    // formatter to GMT
     public static final SimpleDateFormat formatter= new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
 
-    public static final Object LOCK_LINKS_QUEUE = new Object();
-    public static final Object LOCK_VISITED_SET = new Object();
-    private static final Object LOCK_RECRAWLING_QUEUE = new Object();
-    public static final Object LOCK_LINKS_DB_FAIL = new Object();
-    public static List<String> failedLinksList = new ArrayList<>();
-    public static Queue<String> linksQueue = new LinkedList<>();
-    public static HashMap<String, UrlInDB> visitedLinks = new HashMap<String, UrlInDB>();
-    private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();
+    public static final Object LOCK_LINKS_QUEUE = new Object();                                 // linksQueue lock
+    public static final Object LOCK_VISITED_SET = new Object();                                 // visitedSet Lock
+    private static final Object LOCK_RECRAWLING_QUEUE = new Object();                           // linksQueue lock
+    public static final Object LOCK_LINKS_DB_FAIL = new Object();                               // linksQueue lock
+    public static List<String> failedLinksList = new ArrayList<>();                             // linksQueue lock
+    public static Queue<String> linksQueue = new LinkedList<>();                                // linksQueue lock
+    public static HashMap<String, UrlInDB> visitedLinks = new HashMap<String, UrlInDB>();       // visited links list
+    private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();                       // recrawling urls queue
+    // array of connections every thread has a connection with the sql server
     private static List<Connection> connections = new ArrayList<>();
+    // blocked extensions from crawling
     private final List<String> extensions = new ArrayList<String>() {
         {
-            add(".png");
-            add(".jpg");
+            // videos
             add(".gif");
             add(".gifv");
             add(".mp4");
@@ -95,6 +102,9 @@ public class Crawler implements Runnable {
             add(".roq");
             add(".nsv");
             add(".f4v");
+            // images
+            add(".png");
+            add(".jpg");
             add(".webp");
             add(".tiff");
             add(".psd");
@@ -114,10 +124,12 @@ public class Crawler implements Runnable {
     public Crawler() {
     }
 
+    /* if url end of one of the blocked extensions return true otherwise false */
     private boolean is_url_end_with_extensions(String url) {
         return extensions.stream().anyMatch(entry -> url.endsWith(entry));
     }
 
+    /* dequeue url from state table */
     private boolean dequeue_state(Connection connection) {
         try {
             String query = String.format("DELETE FROM state LIMIT 1;");
@@ -130,6 +142,7 @@ public class Crawler implements Runnable {
         }
     }
 
+    /* enqueue url to state table */
     private boolean enqueue_state(Connection connection, String url) {
         try{
             String query = String.format("INSERT INTO state (url) VALUES ('%s');", url);
@@ -145,6 +158,7 @@ public class Crawler implements Runnable {
         }
     }
 
+    /* enqueue list of urls to state table */
     private boolean enqueue_multiple_links(Connection connection, List<String> urls) {
         try {
             String query = "INSERT INTO state (url) VALUES (?);";
@@ -176,7 +190,7 @@ public class Crawler implements Runnable {
         }
     }
 
-    private Boolean is_allowed_url(Connection connection, String url) {
+    private boolean is_allowed_url(Connection connection, String url) {
         try {
             if(is_url_end_with_extensions(url)) {
                 return false;
@@ -320,7 +334,7 @@ public class Crawler implements Runnable {
                             + ", recrawling url : " + url);
                     URLConnection connectionHead = url.openConnection();
                     String lastModified = connectionHead.getHeaderField("Last-Modified");
-                    Boolean isChanged = false;
+                    boolean isChanged = false;
                     java.util.Date lastModifiedDate = null;
                     java.util.Date downloadDate = Crawler.visitedLinks.get(crawledURL.url).date;
                     if(lastModified != null) {
