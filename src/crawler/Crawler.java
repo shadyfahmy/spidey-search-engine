@@ -54,8 +54,68 @@ public class Crawler implements Runnable {
     public static HashMap<String, UrlInDB> visitedLinks = new HashMap<String, UrlInDB>();
     private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();
     private static List<Connection> connections = new ArrayList<>();
+    private final List<String> extensions = new ArrayList<String>() {
+        {
+            add(".png");
+            add(".jpg");
+            add(".gif");
+            add(".gifv");
+            add(".mp4");
+            add(".webm");
+            add(".mkv");
+            add(".flv");
+            add(".vob");
+            add(".ogv");
+            add(".ogg");
+            add(".avi");
+            add(".mts");
+            add(".m2ts");
+            add(".ts");
+            add(".mov");
+            add(".qt");
+            add(".wmv");
+            add(".yuv");
+            add(".rm");
+            add(".rmvb");
+            add(".asf");
+            add(".amv");
+            add(".m4p");
+            add(".m4v");
+            add(".mpg");
+            add(".mp2");
+            add(".mpeg");
+            add(".mpe");
+            add(".mpv");
+            add(".m2v");
+            add(".m4v");
+            add(".svi");
+            add(".3gp");
+            add(".3g2");
+            add(".mxf");
+            add(".roq");
+            add(".nsv");
+            add(".f4v");
+            add(".webp");
+            add(".tiff");
+            add(".psd");
+            add(".raw");
+            add(".bmp");
+            add(".heif");
+            add(".indd");
+            add(".jp2");
+            add(".svg");
+            add(".ai");
+            add(".eps");
+            // add(".pdf"); // not html
+            // add(".ppt"); // not html
+        }
+    };
 
     public Crawler() {
+    }
+
+    private boolean is_url_end_with_extensions(String url) {
+        return extensions.stream().anyMatch(entry -> url.endsWith(entry));
     }
 
     private boolean dequeue_state(Connection connection) {
@@ -116,8 +176,11 @@ public class Crawler implements Runnable {
         }
     }
 
-    private Boolean isAllowedURL(Connection connection, String url) {
+    private Boolean is_allowed_url(Connection connection, String url) {
         try {
+            if(is_url_end_with_extensions(url)) {
+                return false;
+            }
             URI uri = new URI(url);
             uri = uri.normalize();
             String path = uri.getPath();
@@ -281,7 +344,7 @@ public class Crawler implements Runnable {
                             for (final Element link : linksFound) {
                                 final String urlText = link.attr("abs:href");
                                 String path = normalizeUrl(urlText); // URL Normalization
-                                if (this.isAllowedURL(connection, path)) {
+                                if (this.is_allowed_url(connection, path)) {
                                     urls.add(path);
                                 }
                             }
@@ -393,7 +456,7 @@ public class Crawler implements Runnable {
                             final String urlText = link.attr("abs:href");
                             // start lock
                             String path = normalizeUrl(urlText); // URL Normalization
-                            if (this.isAllowedURL(connection, path)) {
+                            if (this.is_allowed_url(connection, path)) {
                                 urls.add(path);
                                 remainingLinksCount--;
                             }
