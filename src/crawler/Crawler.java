@@ -41,7 +41,7 @@ public class Crawler implements Runnable {
     // start crawling time
     private final long startCrawlingTime = System.currentTimeMillis();
     // number of threads to run
-    private static final int numThreads = 20;
+    private static final int numThreads = 10;
     // seedset file for intail crawling
     public static final String seedSetFileName = "./src/crawler/SeedSet.txt";
     // folder to download the crawled pages
@@ -193,6 +193,16 @@ public class Crawler implements Runnable {
     private boolean is_allowed_url(Connection connection, String url) {
         try {
             if(is_url_end_with_extensions(url)) {
+                return false;
+            }
+            boolean flagAlreadyVisited = false;
+            // not necessary but instead of parsing robot.txt for already visited link
+            synchronized (Crawler.LOCK_VISITED_SET) {
+                if (Crawler.visitedLinks.containsKey(url)) {
+                    flagAlreadyVisited = true;
+                }
+            }
+            if(flagAlreadyVisited) {
                 return false;
             }
             URI uri = new URI(url);
@@ -447,14 +457,8 @@ public class Crawler implements Runnable {
                             + ", crawling url : " + url);
                     Document urlContent = save_url_to_db(connection, url.toString(), -1);
                     if(urlContent != null) {
-                        System.out.println(
-                                "_________________________________________________________________________________________");
                         System.out.println("Thread (" + Thread.currentThread().getName() + "): " + crawledURL
                                 + " is now added to output folder");
-                        System.out.println(
-                                "_________________________________________________________________________________________");
-                        // end lock
-                        boolean flagQueueEnoughLinks = false;
                         int remainingLinksCount;
                         synchronized (Crawler.LOCK_LINKS_QUEUE) {
                             synchronized (Crawler.LOCK_VISITED_SET) {
@@ -465,7 +469,9 @@ public class Crawler implements Runnable {
                             continue; // continue downloading pages
                         }
                         List<String> urls = new ArrayList<String>();
+
                         final Elements linksFound = urlContent.select("a[href]");
+
                         for (final Element link : linksFound) {
                             final String urlText = link.attr("abs:href");
                             // start lock
@@ -478,6 +484,7 @@ public class Crawler implements Runnable {
                                 break;
                             }
                         }
+
                         if(urls.size() > 0) {
                             // start lock
                             synchronized (Crawler.LOCK_LINKS_QUEUE) { // make sure before add to db
@@ -485,6 +492,7 @@ public class Crawler implements Runnable {
                                     remainingLinksCount = Crawler.MAX_WEBSITES - (Crawler.linksQueue.size() + Crawler.visitedLinks.size());
                                 }
                             }
+                            // end lock
                             if(remainingLinksCount <= 0) {
                                 continue;
                             }
@@ -492,6 +500,8 @@ public class Crawler implements Runnable {
                             if(urls.size() > remainingLinksCount) {
                                 urls = urls.subList(0, remainingLinksCount);
                             }
+
+                            // start lock
                             synchronized (Crawler.LOCK_LINKS_QUEUE) {
                                 if(this.enqueue_multiple_links(connection, urls)) {
                                     Crawler.linksQueue.addAll(urls);
@@ -594,18 +604,22 @@ public class Crawler implements Runnable {
                 query = String.format("INSERT INTO page (url, crawled_time) VALUES ('%s', '%s');", url, Crawler.formatter.format(date));
             }
             Statement stmt = connection.createStatement();
-            int rowsAffected = stmt.executeUpdate( query, Statement.RETURN_GENERATED_KEYS );
-            ResultSet rs = stmt.getGeneratedKeys();
-            rs.beforeFirst();
-            rs.next();
-            int id = updateId != -1? updateId:rs.getInt(1);
-            stmt.close();
-            // System.out.println("ID: "+ id);
-            BufferedWriter writer = new BufferedWriter(new FileWriter(Crawler.outputFolderBase + id + ".html"));
-            writer.write(urlContent.toString());
-            writer.close();
             synchronized (Crawler.LOCK_VISITED_SET) {
-                Crawler.visitedLinks.put(url, new UrlInDB(date, id));
+                if(!Crawler.visitedLinks.containsKey(url)) {
+                    int rowsAffected = stmt.executeUpdate( query, Statement.RETURN_GENERATED_KEYS );
+                    ResultSet rs = stmt.getGeneratedKeys();
+                    rs.beforeFirst();
+                    rs.next();
+                    int id = updateId != -1? updateId:rs.getInt(1);
+                    stmt.close();
+                    // System.out.println("ID: "+ id);
+                    BufferedWriter writer = new BufferedWriter(new FileWriter(Crawler.outputFolderBase + id + ".html"));
+                    writer.write(urlContent.toString());
+                    writer.close();
+                    Crawler.visitedLinks.put(url, new UrlInDB(date, id));
+                } else {
+                    urlContent = null;
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
