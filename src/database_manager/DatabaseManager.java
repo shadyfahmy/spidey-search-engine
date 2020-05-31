@@ -1,7 +1,4 @@
 package database_manager;
-
-import com.mysql.cj.jdbc.Driver;
-
 import java.io.File;
 import java.io.FileReader;
 import java.sql.*;

@@ -11,6 +11,42 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="SearchEngine" />
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/../lib/jsoup-1.13.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../lib/ibatis-common-2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../lib/lucene-snowball-3.0.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../lib/mysql-connector-java-5.1.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="file://$MODULE_DIR$/../lib" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+        <jarDirectory url="file://$MODULE_DIR$/../lib" recursive="false" />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="file://$MODULE_DIR$/../lib/ejml" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="file://$MODULE_DIR$/../lib/ejml" />
+        </SOURCES>
+        <jarDirectory url="file://$MODULE_DIR$/../lib/ejml" recursive="false" />
+        <jarDirectory url="file://$MODULE_DIR$/../lib/ejml" recursive="false" type="SOURCES" />
+      </library>
+    </orderEntry>
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-data-jpa:2.1.13.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-aop:2.1.13.RELEASE" level="project" />
     <orderEntry type="library" name="Maven: org.springframework:spring-aop:5.1.14.RELEASE" level="project" />
@@ -100,41 +136,5 @@
     <orderEntry type="library" name="Maven: org.springframework:spring-jcl:5.1.14.RELEASE" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.springframework:spring-test:5.1.14.RELEASE" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.xmlunit:xmlunit-core:2.6.3" level="project" />
-    <orderEntry type="module" module-name="SearchEngine" />
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/../lib/jsoup-1.13.1.jar!/" />
-          <root url="jar://$MODULE_DIR$/../lib/ibatis-common-2.jar!/" />
-          <root url="jar://$MODULE_DIR$/../lib/lucene-snowball-3.0.2.jar!/" />
-          <root url="jar://$MODULE_DIR$/../lib/mysql-connector-java-5.1.4.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="file://$MODULE_DIR$/../lib" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-        <jarDirectory url="file://$MODULE_DIR$/../lib" recursive="false" />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="file://$MODULE_DIR$/../lib/ejml" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES>
-          <root url="file://$MODULE_DIR$/../lib/ejml" />
-        </SOURCES>
-        <jarDirectory url="file://$MODULE_DIR$/../lib/ejml" recursive="false" />
-        <jarDirectory url="file://$MODULE_DIR$/../lib/ejml" recursive="false" type="SOURCES" />
-      </library>
-    </orderEntry>
   </component>
 </module>

@@ -38,7 +38,7 @@ public class Crawler implements Runnable {
 
     public static final int MAX_WEBSITES = 5000;
     private final long startCrawlingTime = System.currentTimeMillis();
-    private static final int numThreads = 10;
+    private static final int numThreads = 20;
     public static final String seedSetFileName = "./src/crawler/SeedSet.txt";
     public static final String outputFolderBase = "./html_docs/";
 
@@ -48,6 +48,8 @@ public class Crawler implements Runnable {
     public static final Object LOCK_LINKS_QUEUE = new Object();
     public static final Object LOCK_VISITED_SET = new Object();
     private static final Object LOCK_RECRAWLING_QUEUE = new Object();
+    public static final Object LOCK_LINKS_DB_FAIL = new Object();
+    public static List<String> failedLinksList = new ArrayList<>();
     public static Queue<String> linksQueue = new LinkedList<>();
     public static HashMap<String, UrlInDB> visitedLinks = new HashMap<String, UrlInDB>();
     private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();
@@ -56,33 +58,61 @@ public class Crawler implements Runnable {
     public Crawler() {
     }
 
-    private void dequeue_state(Connection connection) {
+    private boolean dequeue_state(Connection connection) {
         try {
             String query = String.format("DELETE FROM state LIMIT 1;");
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate(query);
+            return true;
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
+            return false;
         }
     }
 
-    private void enqueue_state(Connection connection, String url) {
-        try {
+    private boolean enqueue_state(Connection connection, String url) {
+        try{
             String query = String.format("INSERT INTO state (url) VALUES ('%s');", url);
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate(query);
+            return true;
         } catch (SQLException e) {
-            e.printStackTrace();
+            e.getMessage();
+            synchronized (Crawler.LOCK_LINKS_DB_FAIL) {
+                failedLinksList.add(url);
+            }
+            return false;
         }
     }
 
-    private void clear_state(Connection connection) {
+    private boolean enqueue_multiple_links(Connection connection, List<String> urls) {
         try {
+            String query = "INSERT INTO state (url) VALUES (?);";
+            PreparedStatement pst = connection.prepareStatement(query);
+            for(String url : urls){
+                pst.setString(1, url);
+                pst.addBatch();
+            }
+            pst.executeBatch();
+            return true;
+        } catch (SQLException e) {
+            e.getMessage();
+            synchronized (Crawler.LOCK_LINKS_DB_FAIL) {
+                failedLinksList.addAll(urls);
+            }
+            return false;
+        }
+    }
+
+    private boolean clear_state(Connection connection) {
+        try{
             String query = String.format("DELETE FROM state;");
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate(query);
-        } catch (SQLException e) {
-            e.printStackTrace();
+            return true;
+        } catch (SQLException e){
+            e.getMessage();
+            return false;
         }
     }
 
@@ -146,11 +176,12 @@ public class Crawler implements Runnable {
                 }
                 return true;
             }
-        } catch (IOException e) {
-            synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
-                Crawler.linksQueue.add(url);
-                enqueue_state(connection, url);
-            }
+        } catch (IOException ex1) {
+                synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
+                    if(this.enqueue_state(connection, url)) {
+                        Crawler.linksQueue.add(url);
+                    }
+                }
             return false;
         } catch (URISyntaxException e) {
             return false;
@@ -246,15 +277,22 @@ public class Crawler implements Runnable {
                             System.out.println(
                                     "_________________________________________________________________________________________");
                             final Elements linksFound = urlContent.select("a[href]");
+                            List<String> urls = new ArrayList<String>();
                             for (final Element link : linksFound) {
                                 final String urlText = link.attr("abs:href");
                                 String path = normalizeUrl(urlText); // URL Normalization
                                 if (this.isAllowedURL(connection, path)) {
-                                    synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                        Crawler.linksQueue.add(path);
-                                        enqueue_state(connection, path);
+                                    urls.add(path);
+                                }
+                            }
+                            if(urls.size() > 0) {
+                                // start lock
+                                synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                                    if(this.enqueue_multiple_links(connection, urls)) {
+                                        Crawler.linksQueue.addAll(urls);
                                     }
                                 }
+                                // end lock
                             }
                         } else {
                             // delete from db
@@ -306,12 +344,15 @@ public class Crawler implements Runnable {
             // start lock
             synchronized (Crawler.LOCK_LINKS_QUEUE) {
                 if (!Crawler.linksQueue.isEmpty()) {
-                    crawledURL = Crawler.linksQueue.poll();
-                    dequeue_state(connection);
-                    synchronized (Crawler.LOCK_VISITED_SET) {
-                        if (Crawler.visitedLinks.containsKey(crawledURL)) {
-                            flagAlreadyVisited = true;
+                    if(dequeue_state(connection)) {
+                        crawledURL = Crawler.linksQueue.poll();
+                        synchronized (Crawler.LOCK_VISITED_SET) {
+                            if (Crawler.visitedLinks.containsKey(crawledURL)) {
+                                flagAlreadyVisited = true;
+                            }
                         }
+                    } else {
+                        flagAlreadyVisited = true;
                     }
                 } else {
                     System.out.println("Thread (" + Thread.currentThread().getName() + "): Empty Queue List");
@@ -336,28 +377,47 @@ public class Crawler implements Runnable {
                         System.out.println(
                                 "_________________________________________________________________________________________");
                         // end lock
+                        boolean flagQueueEnoughLinks = false;
+                        int remainingLinksCount;
+                        synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                            synchronized (Crawler.LOCK_VISITED_SET) {
+                                remainingLinksCount = Crawler.MAX_WEBSITES - (Crawler.visitedLinks.size() + Crawler.linksQueue.size());
+                            }
+                        }
+                        if (remainingLinksCount <= 0) {
+                            continue; // continue downloading pages
+                        }
+                        List<String> urls = new ArrayList<String>();
                         final Elements linksFound = urlContent.select("a[href]");
                         for (final Element link : linksFound) {
                             final String urlText = link.attr("abs:href");
                             // start lock
                             String path = normalizeUrl(urlText); // URL Normalization
-                            int sizeQueue;
-                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                sizeQueue = Crawler.linksQueue.size();
+                            if (this.isAllowedURL(connection, path)) {
+                                urls.add(path);
+                                remainingLinksCount--;
                             }
-                            boolean breakFlag = false;
-                            synchronized (Crawler.LOCK_VISITED_SET) {
-                                if (Crawler.visitedLinks.size() + sizeQueue >= MAX_WEBSITES) {
-                                    breakFlag = true;
-                                }
-                            }
-                            if(breakFlag){
+                            if(remainingLinksCount == 0){
                                 break;
                             }
-                            if (this.isAllowedURL(connection, path)) {
-                                synchronized (Crawler.LOCK_LINKS_QUEUE) {
-                                    Crawler.linksQueue.add(path);
-                                    enqueue_state(connection, path);
+                        }
+                        if(urls.size() > 0) {
+                            // start lock
+                            synchronized (Crawler.LOCK_LINKS_QUEUE) { // make sure before add to db
+                                synchronized (Crawler.LOCK_VISITED_SET) {
+                                    remainingLinksCount = Crawler.MAX_WEBSITES - (Crawler.linksQueue.size() + Crawler.visitedLinks.size());
+                                }
+                            }
+                            if(remainingLinksCount <= 0) {
+                                continue;
+                            }
+
+                            if(urls.size() > remainingLinksCount) {
+                                urls = urls.subList(0, remainingLinksCount);
+                            }
+                            synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                                if(this.enqueue_multiple_links(connection, urls)) {
+                                    Crawler.linksQueue.addAll(urls);
                                 }
                             }
                             // end lock
@@ -365,8 +425,9 @@ public class Crawler implements Runnable {
                     }
                 } catch (IOException e) {
                     synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
-                        Crawler.linksQueue.add(crawledURL);
-                        enqueue_state(connection, crawledURL);
+                        if(this.enqueue_state(connection, crawledURL)) {
+                            Crawler.linksQueue.add(crawledURL);
+                        }
                     }
                     System.out.println(
                             "_________________________________________________________________________________________");
@@ -393,12 +454,15 @@ public class Crawler implements Runnable {
             // start lock
             synchronized (Crawler.LOCK_LINKS_QUEUE) {
                 if (!Crawler.linksQueue.isEmpty()) {
-                    crawledURL = Crawler.linksQueue.poll();
-                    dequeue_state(connection);
-                    synchronized (Crawler.LOCK_VISITED_SET) {
-                        if (Crawler.visitedLinks.containsKey(crawledURL)) {
-                            flagVisitedLink = true;
+                    if(dequeue_state(connection)) {
+                        crawledURL = Crawler.linksQueue.poll();
+                        synchronized (Crawler.LOCK_VISITED_SET) {
+                            if (Crawler.visitedLinks.containsKey(crawledURL)) {
+                                flagVisitedLink = true;
+                            }
                         }
+                    } else {
+                        flagVisitedLink = true;
                     }
                 } else {
                     System.out.println("Thread (" + Thread.currentThread().getName() + "): Empty Queue List");
@@ -420,8 +484,9 @@ public class Crawler implements Runnable {
                     Document urlContent = save_url_to_db(connection, url.toString(), -1);
                 } catch (IOException e) {
                     synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
-                        Crawler.linksQueue.add(crawledURL);
-                        enqueue_state(connection, crawledURL);
+                        if(this.enqueue_state(connection, crawledURL)) {
+                            Crawler.linksQueue.add(crawledURL);
+                        }
                     }
                     System.out.println(
                             "_________________________________________________________________________________________");
@@ -484,13 +549,31 @@ public class Crawler implements Runnable {
         }
     }
 
+    private void handel_falied_inserted_urls(Connection connection) {
+        // Handeling not inserted in db urls
+        // I chose to crawl them
+        while(failedLinksList.size() > 0){
+            synchronized (Crawler.LOCK_LINKS_DB_FAIL) {
+                synchronized (Crawler.LOCK_LINKS_QUEUE) {
+                    if (enqueue_multiple_links(connection, failedLinksList)) {
+                        linksQueue.addAll(failedLinksList);
+                        failedLinksList.clear();
+                    }
+                }
+            }
+            crawlUpdatedLinks(connection);
+        }
+    }
+
     public void run() {
         int threadNumber = Integer.valueOf(Thread.currentThread().getName());
         Connection connection = Crawler.connections.get(threadNumber);
         crawling(connection); // before recrawling just crawl new websites
+        handel_falied_inserted_urls(connection);
         while(true){
             recrawling(connection);
             crawlUpdatedLinks(connection); // After recrawling, this function crawls new fetched urls in updated websites
+            handel_falied_inserted_urls(connection);
         }
     }
 
