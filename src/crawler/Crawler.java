@@ -197,17 +197,6 @@ public class Crawler implements Runnable {
         }
     }
 
-    /*private void parse_robots_txt(String robotTxtContent) {
-        Pattern pattern = Pattern.compile("(User-agent: " + Crawler.USER_AGENT_NAME+")(Disallow: (.*))", Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(robotTxtContent);
-        while (matcher.find()) {
-            System.out.println("The user agent:" + matcher.group(1));
-            System.out.println("Disallow List: ");
-            System.out.println("The user agent:" + matcher.group(2));
-            System.out.println("----------------------");
-        }
-    }*/
-
     private boolean is_allowed_url(Connection connection, String url) {
         try {
             if(is_url_end_with_extensions(url)) {
