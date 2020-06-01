@@ -1,10 +1,10 @@
 use mysql;
 
-drop database if exists spidey_search_engine;
+drop database if exists test_search_engine;
 
-create database spidey_search_engine;
-ALTER DATABASE spidey_search_engine CHARACTER SET utf8 COLLATE utf8_general_ci;
-use spidey_search_engine;
+create database test_search_engine;
+ALTER DATABASE test_search_engine CHARACTER SET utf8 COLLATE utf8_general_ci;
+use test_search_engine;
 
 drop table if exists page;
 

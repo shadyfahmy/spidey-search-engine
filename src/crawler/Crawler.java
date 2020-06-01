@@ -8,6 +8,8 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import database_manager.DatabaseManager;
 import org.jsoup.Jsoup;
@@ -41,6 +43,8 @@ public class Crawler implements Runnable {
     private static final int EXTRA_MAX_WEBSITES_FACTOR = 5;
     private static final int EXTRA_FOR_IO_EXEPTION = MAX_WEBSITES / EXTRA_MAX_WEBSITES_FACTOR;
     public static final int TOTAL_MAX_WEBSITES_TO_QUEUE = MAX_WEBSITES + EXTRA_FOR_IO_EXEPTION;
+    // user agent name
+    private static final String USER_AGENT_NAME = "*";
     // start crawling time
     private final long startCrawlingTime = System.currentTimeMillis();
     // number of threads to run
@@ -58,11 +62,9 @@ public class Crawler implements Runnable {
     public static final Object LOCK_VISITED_SET = new Object();                                 // visitedSet Lock
     private static final Object LOCK_RECRAWLING_QUEUE = new Object();                           // linksQueue lock
     public static final Object LOCK_LINKS_DB_FAIL = new Object();                               // fail list lock
-//    public static final Object LOCK_ROBOT_IS_ALLOWED = new Object();                            // robot  lock
     public static List<String> failedLinksList = new ArrayList<>();                             // linksQueue lock
     public static Queue<String> linksQueue = new LinkedList<>();                                // linksQueue lock
     public static HashMap<String, UrlInDB> visitedLinks = new HashMap<String, UrlInDB>();       // visited links list
-//    public static HashMap<String, Boolean> robotAllowedOrDisallowed = new HashMap<String, Boolean>();
 
     private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();                       // recrawling urls queue
     // array of connections every thread has a connection with the sql server
@@ -168,17 +170,17 @@ public class Crawler implements Runnable {
         try {
             String query = "INSERT INTO state (url) VALUES (?);";
             PreparedStatement pst = connection.prepareStatement(query);
-            for(String url : urls){
+            connection.setAutoCommit(false);
+            for (String url : urls) {
                 pst.setString(1, url);
                 pst.addBatch();
             }
             pst.executeBatch();
+            connection.setAutoCommit(true);
             return true;
         } catch (SQLException e) {
             e.getMessage();
-            synchronized (Crawler.LOCK_LINKS_DB_FAIL) {
-                failedLinksList.addAll(urls);
-            }
+            failedLinksList.addAll(urls);
             return false;
         }
     }
@@ -194,6 +196,17 @@ public class Crawler implements Runnable {
             return false;
         }
     }
+
+    /*private void parse_robots_txt(String robotTxtContent) {
+        Pattern pattern = Pattern.compile("(User-agent: " + Crawler.USER_AGENT_NAME+")(Disallow: (.*))", Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(robotTxtContent);
+        while (matcher.find()) {
+            System.out.println("The user agent:" + matcher.group(1));
+            System.out.println("Disallow List: ");
+            System.out.println("The user agent:" + matcher.group(2));
+            System.out.println("----------------------");
+        }
+    }*/
 
     private boolean is_allowed_url(Connection connection, String url) {
         try {
@@ -217,21 +230,18 @@ public class Crawler implements Runnable {
             String rootPath = url.replace(path, "");
             String robotPath = rootPath + "/robots.txt";
             // System.out.println(robotPath);
-
             try (BufferedReader in = new BufferedReader(new InputStreamReader(new URL(robotPath).openStream()))) {
                 String line = null;
                 boolean flag = false;
                 final String disallowStartWith = "disallow:";
                 final String userAgentStartWith = "user-agent:";
-                final String userAgentName = "*";
                 while ((line = in.readLine()) != null) {
                     int offset = line.indexOf("#");
-                    if (-1 != offset) {
+                    if (offset != -1) {
                         line = line.substring(0, offset);
                     }
                     line = line.replaceAll(" ", "").replace("\n", "").toLowerCase();
                     // System.out.println(line);
-
                     if (flag) {
                         if (line.startsWith(disallowStartWith)) {
                             offset = line.indexOf(":");
@@ -259,7 +269,7 @@ public class Crawler implements Runnable {
                         }
                     } else if (line.startsWith(userAgentStartWith)) {
                         if (userAgentStartWith.length() < line.length()) {
-                            if (line.substring(userAgentStartWith.length()).equals(userAgentName)) {
+                            if (line.substring(userAgentStartWith.length()).equals(Crawler.USER_AGENT_NAME)) {
                                 // System.out.println("FOUND: " + line);
                                 flag = true;
                             }
