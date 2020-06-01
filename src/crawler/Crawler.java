@@ -54,10 +54,13 @@ public class Crawler implements Runnable {
     public static final Object LOCK_LINKS_QUEUE = new Object();                                 // linksQueue lock
     public static final Object LOCK_VISITED_SET = new Object();                                 // visitedSet Lock
     private static final Object LOCK_RECRAWLING_QUEUE = new Object();                           // linksQueue lock
-    public static final Object LOCK_LINKS_DB_FAIL = new Object();                               // linksQueue lock
+    public static final Object LOCK_LINKS_DB_FAIL = new Object();                               // fail list lock
+//    public static final Object LOCK_ROBOT_IS_ALLOWED = new Object();                            // robot  lock
     public static List<String> failedLinksList = new ArrayList<>();                             // linksQueue lock
     public static Queue<String> linksQueue = new LinkedList<>();                                // linksQueue lock
     public static HashMap<String, UrlInDB> visitedLinks = new HashMap<String, UrlInDB>();       // visited links list
+//    public static HashMap<String, Boolean> robotAllowedOrDisallowed = new HashMap<String, Boolean>();
+
     private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();                       // recrawling urls queue
     // array of connections every thread has a connection with the sql server
     private static List<Connection> connections = new ArrayList<>();
@@ -121,8 +124,7 @@ public class Crawler implements Runnable {
         }
     };
 
-    public Crawler() {
-    }
+    public Crawler() {}
 
     /* if url end of one of the blocked extensions return true otherwise false */
     private boolean is_url_end_with_extensions(String url) {
@@ -382,11 +384,11 @@ public class Crawler implements Runnable {
                                 // end lock
                             }
                         } else {
-                            // delete from db
-                            delete_from_db(connection, crawledURL.url, crawledURL.id);
-                            // delete from HDD
-                            File toDeleteFile = new File(outputFolderBase+crawledURL.id+".html");
-                            toDeleteFile.delete();
+                            /* delete from db */
+                            // delete_from_db(connection, crawledURL.url, crawledURL.id);
+                            /* delete from HDD */
+                            // File toDeleteFile = new File(outputFolderBase+crawledURL.id+".html");
+                            // toDeleteFile.delete();
                         }
                     }
                 } catch (IOException e) {
