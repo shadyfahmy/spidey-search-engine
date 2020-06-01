@@ -8,6 +8,11 @@ http://www.dailymail.co.uk
 http://www.nytimes.com
 http://www.imdb.com
 http://www.rottentomatoes.com
+http://www.goodreads.com
+http://www.independent.co.uk
+http://www.sciencemag.org
+http://arstechnica.com
+http://www.chemistryworld.com
 http://www.reddit.com
 http://www.4chan.org
 http://www.flickr.com

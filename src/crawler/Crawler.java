@@ -38,6 +38,9 @@ public class Crawler implements Runnable {
 
     // max number of website to crawl may be more but not less
     public static final int MAX_WEBSITES = 5000;
+    private static final int EXTRA_MAX_WEBSITES_FACTOR = 5;
+    private static final int EXTRA_FOR_IO_EXEPTION = MAX_WEBSITES / EXTRA_MAX_WEBSITES_FACTOR;
+    public static final int TOTAL_MAX_WEBSITES_TO_QUEUE = MAX_WEBSITES + EXTRA_FOR_IO_EXEPTION;
     // start crawling time
     private final long startCrawlingTime = System.currentTimeMillis();
     // number of threads to run
@@ -464,7 +467,7 @@ public class Crawler implements Runnable {
                         int remainingLinksCount;
                         synchronized (Crawler.LOCK_LINKS_QUEUE) {
                             synchronized (Crawler.LOCK_VISITED_SET) {
-                                remainingLinksCount = Crawler.MAX_WEBSITES - (Crawler.visitedLinks.size() + Crawler.linksQueue.size());
+                                remainingLinksCount = Crawler.TOTAL_MAX_WEBSITES_TO_QUEUE - (Crawler.visitedLinks.size() + Crawler.linksQueue.size());
                             }
                         }
                         if (remainingLinksCount <= 0) {
@@ -491,7 +494,7 @@ public class Crawler implements Runnable {
                             // start lock
                             synchronized (Crawler.LOCK_LINKS_QUEUE) { // make sure before add to db
                                 synchronized (Crawler.LOCK_VISITED_SET) {
-                                    remainingLinksCount = Crawler.MAX_WEBSITES - (Crawler.linksQueue.size() + Crawler.visitedLinks.size());
+                                    remainingLinksCount = Crawler.TOTAL_MAX_WEBSITES_TO_QUEUE - (Crawler.linksQueue.size() + Crawler.visitedLinks.size());
                                 }
                             }
                             // end lock
