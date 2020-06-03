@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import static crawler.Crawler.normalizeUrl;
 import static java.lang.Math.ceil;
+import static java.lang.Math.exp;
 
 import java.util.Queue;
 import me.tongfei.progressbar.*;
@@ -31,16 +32,18 @@ public class Indexer implements Runnable {
 	private static DatabaseManager dbManager;
 	private static Integer imagesGlobalLock = 0;
 	private static final int THREADS_COUNT = 10;
+	private static final int PATCH_SIZE = 300;
+	private static long expectedTime = 0;
 	private static List<String> pages;
 	private static ProgressBar pb;
 
-	private static int pagesCount = 0;
-	private static int actualPagesCount = 0;
+	private static int pagesCount;
+	private static int actualPagesCount;
 	private static HashMap<Integer, Integer> pagesState = new HashMap<>();
-	private static HashMap<String, Integer> pageURLToID = new HashMap<>();
+	private static HashMap<String, Integer> pageURLToID;
 	private static boolean commitThread = true, imageThread = true;
-	private static HashMap<String, Integer> globalWordsIDs = new HashMap<>();
-	private static HashMap<String, Integer> globalImageWordsIDs = new HashMap<>();
+	private static HashMap<String, Integer> globalWordsIDs ;
+	private static HashMap<String, Integer> globalImageWordsIDs;
 
 	public enum States {SKIP, CRAWL, RECRAWL};
 	private static int countIndexed;
@@ -294,7 +297,8 @@ public class Indexer implements Runnable {
 		} else if (threadNumber > THREADS_COUNT) {
 			ImageThread();
 		}
-		else {
+		else
+			{
 			for (int p = threadNumber; p < pagesCount; p += THREADS_COUNT) {
 				String fileName = pages.get(p);
 				String[] fileNameParts = fileName.split("[.]");
@@ -654,6 +658,8 @@ public class Indexer implements Runnable {
 					e.printStackTrace();
 					System.out.println(superQ);
 				}
+				if(countIndexed > PATCH_SIZE-THREADS_COUNT)
+					break;
 
 			}
 		}
@@ -662,6 +668,7 @@ public class Indexer implements Runnable {
 
 	public static void main(String args[]) {
 		while(true) {
+			long start = System.currentTimeMillis();
 			countIndexed = 0;
 			commitThread = true;
 			imageThread = true;
@@ -680,7 +687,10 @@ public class Indexer implements Runnable {
 			}
 			initializePages(initialConnection);
 			if (actualPagesCount > 0) {
-				pb = new ProgressBar("Indexing", actualPagesCount); // name, initial max
+				System.out.println("Indexing in patches of " + PATCH_SIZE + ", total pages remaining are " + actualPagesCount);
+				if(expectedTime != 0)
+					System.out.print(" estimated remaining time is " + (expectedTime*actualPagesCount/PATCH_SIZE) + " minutes");
+				pb = new ProgressBar("Indexing", Math.min(actualPagesCount,PATCH_SIZE)); // name, initial max
 				pb.start();
 			}
 
@@ -735,6 +745,12 @@ public class Indexer implements Runnable {
 				if (actualPagesCount > 0) {
 					pb.stop();
 					PageRanker.getInstance().timedUpdatePageRanks();
+					Thread.sleep(2000);
+					System.out.print("\033[H\033[2J");
+					if(expectedTime == 0)
+						expectedTime = (System.currentTimeMillis() - start)/60000;
+					else
+						expectedTime =((System.currentTimeMillis() - start)/60000 + expectedTime)/2;
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -746,7 +762,6 @@ public class Indexer implements Runnable {
 
 		try {
 
-			pagesCount = 0;
 			actualPagesCount = 0;
 			pagesState = new HashMap<>();
 			pageURLToID = new HashMap<>();
