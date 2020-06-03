@@ -9,7 +9,7 @@ use test_search_engine;
 drop table if exists page;
 
 create table page (
-	id serial,
+	id MEDIUMINT unsigned AUTO_INCREMENT,
 	url text not null,
 	crawled_time tinytext not null,
 	indexed_time tinytext default null,
@@ -30,8 +30,8 @@ create table state (
 drop table if exists page_connections;
 
 create table page_connections (
-	from_page_id bigint unsigned,
-	to_page_id bigint unsigned,
+	from_page_id MEDIUMINT unsigned,
+	to_page_id MEDIUMINT unsigned,
 	primary key (from_page_id, to_page_id),
 	foreign key (from_page_id) references page(id) on delete cascade on update cascade,
 	foreign key (to_page_id) references page(id) on delete cascade on update cascade
@@ -40,7 +40,7 @@ create table page_connections (
 drop table if exists word;
 
 create table word (
-	id serial,
+	id MEDIUMINT unsigned AUTO_INCREMENT,
 	word varchar(500) not null,
 	pages_count int unsigned not null,
 	primary key (id),
@@ -50,9 +50,9 @@ create table word (
 drop table if exists word_index;
 
 create table word_index (
-	word_id bigint unsigned,
-	page_id bigint unsigned,
-	count int unsigned not null,
+	word_id MEDIUMINT unsigned,
+	page_id MEDIUMINT unsigned,
+	count MEDIUMINT unsigned not null,
 	important bool not null,
 	primary key (word_id, page_id),
 	foreign key (page_id) references page(id) on delete cascade on update cascade,
@@ -70,7 +70,7 @@ drop table if exists history;
 
 CREATE TABLE history (
    user int NOT NULL,
-   page bigint unsigned,
+   page MEDIUMINT unsigned,
    times int NOT NULL DEFAULT '0',
    PRIMARY KEY (user, page),
    FOREIGN KEY (page) REFERENCES page(id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -86,9 +86,9 @@ CREATE TABLE queries (
 drop table if exists word_positions;
 
 create table word_positions (
-	word_id bigint unsigned,
-	page_id bigint unsigned,
-	position bigint,
+	word_id MEDIUMINT unsigned,
+	page_id MEDIUMINT unsigned,
+	position MEDIUMINT unsigned,
 	primary key (word_id, page_id, position),
 	foreign key (page_id) references page(id) on delete cascade on update cascade,
 	foreign key (word_id) references word(id) on delete cascade on update cascade
@@ -98,7 +98,7 @@ create table word_positions (
 drop table if exists word_image;
 
 create table word_image (
-	id serial,
+	id MEDIUMINT unsigned AUTO_INCREMENT,
 	word varchar(500) not null,
 	images_count int unsigned not null,
 	primary key (id),
@@ -108,7 +108,7 @@ create table word_image (
 drop table if exists image;
 
 create table image (
-	id serial,
+	id MEDIUMINT unsigned AUTO_INCREMENT,
 	url text not null,
 	description text default null,
 	primary key (id)
@@ -116,8 +116,8 @@ create table image (
 drop table if exists word_index_image;
 
 create table word_index_image (
-	word_id bigint unsigned,
-	image_id bigint unsigned,
+	word_id MEDIUMINT unsigned,
+	image_id MEDIUMINT unsigned,
 	primary key (word_id, image_id),
 	foreign key (image_id) references image(id) on delete cascade on update cascade,
 	foreign key (word_id) references word_image(id) on delete cascade on update cascade
