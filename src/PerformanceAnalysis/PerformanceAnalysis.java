@@ -1,11 +1,10 @@
 package PerformanceAnalysis;
 
+import crawler.Crawler;
 import database_manager.DatabaseManager;
-import ranker.PageRanker;
 
 import java.io.*;
 import java.net.*;
-import java.net.http.HttpHeaders;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,15 +12,19 @@ import java.sql.Statement;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
+
 public class PerformanceAnalysis implements Runnable {
 
     public static final DatabaseManager dbManager = new DatabaseManager();  // Database manager instance
-    public final static int startNumOfThreads = 1;                          // could be any number
-    public final static int numThreadsStep = 1;                             // could be any number
-    public final static int secondsBeforeRunAgain = 0;
-    public static final int connectTimeOut = 5000;
-    public static final int readTimeOut = 5000;
-    public static int numOfThreads = startNumOfThreads;
+    public final static int START_NUM_OF_THREADS = 50;                       // could be any number
+    public final static int NUM_THREAD_STEP = 10;                            // could be any number
+    public final static int SECONDS_BEFORE_LOAD_TEST = 1;
+    public final static int SECONDS_TO_SLEEP = 60;
+    public static final int CONNECT_TIME_OUT = 5000;
+    public static final int READ_TIME_OUT = 5000;
+    public static int numOfThreads = START_NUM_OF_THREADS;
     public static int maxNumHandeledRequests = 0;
     private static final String baseUrl = "http://localhost:8080/api/v1/get-results?";
     private static final String searchText = "Sorting algorithms";
@@ -70,11 +73,11 @@ public class PerformanceAnalysis implements Runnable {
             String url = PerformanceAnalysis.baseUrl + this.build_request_url(parameters);
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(PerformanceAnalysis.connectTimeOut);
-            connection.setReadTimeout(PerformanceAnalysis.readTimeOut);
+            connection.setConnectTimeout(PerformanceAnalysis.CONNECT_TIME_OUT);
+            connection.setReadTimeout(PerformanceAnalysis.READ_TIME_OUT);
             int status = connection.getResponseCode();
-//            System.out.println("status: " + status);
-            // status > 299 // error // 405 timeout error
+            // System.out.println("status: " + status);
+            // status > 299 is an error and 405 is a timeout error
             connection.disconnect();
         } catch (SocketTimeoutException e) {
             System.out.println("Time Out!, Thread Number: " + Thread.currentThread().getName());
@@ -83,14 +86,9 @@ public class PerformanceAnalysis implements Runnable {
             System.out.println("Not Time Out!");
         }
         return ret;
-
-//        return this.httpClient.get<any>(this.baseUrl + "/get-results?text="+text+
-//                "&user="+user+"&page="+page, {headers: header})
     }
 
     public void run() {
-//        int threadNumber = Integer.valueOf(Thread.currentThread().getName());
-//        System.out.println("my name is " + threadNumber);
         boolean isFailed = get_results();
         synchronized (PerformanceAnalysis.LOCK_IS_FAILED) {
             if (isFailed) {
@@ -105,27 +103,17 @@ public class PerformanceAnalysis implements Runnable {
         List<Integer> numOfCrawledPagesList = new ArrayList<>();
         List<Integer> sizeOfIndexTableList = new ArrayList<>();
         List<Integer> keyWordsSizeList = new ArrayList<>();
+        List<Double> latencyList = new ArrayList<>();
 
-        // 1. How many simultaneous search requests can your solution handle?
-
-        // 2. How is the latency of your solution affected by the number of simultaneous search requests?
-        Thread t;
-        int threadsCounter = 0;
-        while (PerformanceAnalysis.numOfThreads > threadsCounter) {
-            t = new Thread(new PerformanceAnalysis());
-            t.setName(String.valueOf(threadsCounter++));
-            threads.add(t);
-        }
-
+        int numOfCrawledPages = 0;
         while(true) {
-            // 3. How is the search req uest latency of your solution affected by the number of web pages crawled?
-//            System.out.println("-------------------------------------------------------");
+            // 3. How is the search request latency of your solution affected by the number of web pages crawled?
             try {
                 Statement stm = connection.createStatement();
                 String sql = "SELECT COUNT(*) AS total FROM page;";
                 ResultSet res = stm.executeQuery(sql);
                 res.next();
-                int numOfCrawledPages = res.getInt("total");
+                numOfCrawledPages = res.getInt("total");
                 numOfCrawledPagesList.add(numOfCrawledPages);
                 res.close();
                 stm.close();
@@ -158,13 +146,80 @@ public class PerformanceAnalysis implements Runnable {
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
-            System.out.println("Try simultaneous search requests = " + threads.size());
 
+            Thread t1 = new Thread(new PerformanceAnalysis());
+            long start = System.currentTimeMillis();
+            t1.start();
+            try {
+                t1.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            long end = System.currentTimeMillis();
+            long elapsedTime = end - start;
+            latencyList.add((double)elapsedTime);
+            if(Crawler.MAX_WEBSITES <= numOfCrawledPages) {
+                break;
+            }
+            try {
+                TimeUnit.SECONDS.sleep(PerformanceAnalysis.SECONDS_TO_SLEEP);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // 3. How is the search request latency of your solution affected by the number of web pages crawled?
+        if(numOfCrawledPagesList.size() > 0 && latencyList.size() == numOfCrawledPagesList.size()) {
+            SwingUtilities.invokeLater(() -> {
+                XYLineChart chart = new XYLineChart("Request latency vs Number Of Crawled Pages", numOfCrawledPagesList, latencyList, "Number Of Crawled Pages", "Latency In ms");
+                chart.setSize(800, 400);
+                chart.setLocationRelativeTo(null);
+                chart.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                chart.setVisible(true);
+            });
+        }
+
+        // 4. How is the search request latency of your solution affected by the size of the index table?
+        if(sizeOfIndexTableList.size() > 0 && latencyList.size() == sizeOfIndexTableList.size()) {
+            SwingUtilities.invokeLater(() -> {
+                XYLineChart chart = new XYLineChart("Request latency vs Size Of Indexed Table", sizeOfIndexTableList, latencyList, "Size Of Indexed Table", "Latency In ms");
+                chart.setSize(800, 400);
+                chart.setLocationRelativeTo(null);
+                chart.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                chart.setVisible(true);
+            });
+        }
+
+        // 5. How is the search request latency of your solution affected by the ranking process?
+        if(keyWordsSizeList.size() > 0 && latencyList.size() == keyWordsSizeList.size()) {
+            SwingUtilities.invokeLater(() -> {
+                XYLineChart chart = new XYLineChart("Request latency vs Number Of KeyWords", keyWordsSizeList, latencyList, "Number Of KeyWords", "Latency In ms");
+                chart.setSize(800, 400);
+                chart.setLocationRelativeTo(null);
+                chart.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                chart.setVisible(true);
+            });
+        }
+
+        Thread t;
+        int threadsCounter = 0;
+        while (PerformanceAnalysis.numOfThreads > threadsCounter) {
+            t = new Thread(new PerformanceAnalysis());
+            t.setName(String.valueOf(threadsCounter++));
+            threads.add(t);
+        }
+
+        List <Double> newLatencyList = new ArrayList<>();
+        List<Integer> numOfSearchReqList = new ArrayList<>();
+        numOfSearchReqList.add(PerformanceAnalysis.numOfThreads);
+        // 1. How many simultaneous search requests can your solution handle?
+        while(true) {
+            System.out.println("Try simultaneous search requests = " + threads.size());
             // Run threads
+            long start = System.currentTimeMillis();
             for (final Thread thread : threads) {
                 thread.start();
             }
-
             // Join threads
             for (final Thread thread : threads) {
                 try {
@@ -174,18 +229,23 @@ public class PerformanceAnalysis implements Runnable {
                             "                     ----------------- Error Thread has been interupted -----------------                     ");
                 }
             }
-
+            long end = System.currentTimeMillis();
+            long elapsedTime = end - start;
+            newLatencyList.add((double)elapsedTime);
             if(!PerformanceAnalysis.isFailed) {
                 PerformanceAnalysis.maxNumHandeledRequests = PerformanceAnalysis.numOfThreads;
             } else {
+                System.out.println("-----------------------------------------------------------------");
                 System.out.println("Max number of simultaneous search requests = " + PerformanceAnalysis.maxNumHandeledRequests);
+                System.out.println("-----------------------------------------------------------------");
                 break;
             }
 
             // Add new number of threads
             threads.clear();
             threadsCounter = 0;
-            PerformanceAnalysis.numOfThreads += PerformanceAnalysis.numThreadsStep;
+            PerformanceAnalysis.numOfThreads += PerformanceAnalysis.NUM_THREAD_STEP;
+            numOfSearchReqList.add(PerformanceAnalysis.numOfThreads);
             while (PerformanceAnalysis.numOfThreads > threadsCounter) {
                 t = new Thread(new PerformanceAnalysis());
                 t.setName(String.valueOf(threadsCounter++));
@@ -193,13 +253,25 @@ public class PerformanceAnalysis implements Runnable {
             }
 
             // Sleep if you want
-            if(PerformanceAnalysis.secondsBeforeRunAgain > 0){
+            if(PerformanceAnalysis.SECONDS_BEFORE_LOAD_TEST > 0){
                 try {
-                    TimeUnit.SECONDS.sleep(PerformanceAnalysis.secondsBeforeRunAgain);
+                    TimeUnit.SECONDS.sleep(PerformanceAnalysis.SECONDS_BEFORE_LOAD_TEST);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
         }
+
+        // 2. How is the latency of your solution affected by the number of simultaneous search requests?
+        if(numOfSearchReqList.size() > 0 && newLatencyList.size() == numOfSearchReqList.size()) {
+            SwingUtilities.invokeLater(() -> {
+                XYLineChart chart = new XYLineChart("Request latency vs Number Of Simultaneous Search Requests", numOfSearchReqList, newLatencyList, "Number Of Simultaneous Search Requests", "Latency In ms");
+                chart.setSize(800, 400);
+                chart.setLocationRelativeTo(null);
+                chart.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                chart.setVisible(true);
+            });
+        }
+
     }
 }
