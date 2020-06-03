@@ -12,8 +12,7 @@ import org.tartarus.snowball.ext.EnglishStemmer;
 public class Stemmer {
 
     ArrayList<String> stopwords = new ArrayList<>();            //to store stop words
-
-    EnglishStemmer stemmer = new EnglishStemmer();
+    //EnglishStemmer stemmer;
 
     //read stop words and store them
     public Stemmer() {
@@ -30,6 +29,7 @@ public class Stemmer {
 
     public ArrayList<String> getStemmedWords (String text) {
 
+        EnglishStemmer stemmer = new EnglishStemmer();
         String[] words = text.split("[\\s\\W]");
         ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
         ArrayList<String> impWords = new ArrayList<String>();
@@ -49,6 +49,7 @@ public class Stemmer {
             stemmer.stem();
             stemmedWord = stemmer.getCurrent();
             impWords.add(stemmedWord);
+
         }
 
         return impWords;
