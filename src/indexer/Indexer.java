@@ -20,6 +20,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import static crawler.Crawler.normalizeUrl;
+import static java.lang.Math.ceil;
+
 import java.util.Queue;
 import me.tongfei.progressbar.*;
 import ranker.PageRanker;
@@ -27,21 +29,23 @@ import ranker.PageRanker;
 
 public class Indexer implements Runnable {
 	private static DatabaseManager dbManager;
-	private static final int THREADS_COUNT = 15;
-	private static int pagesCount = 0;
-	private static int actualPagesCount = 0;
+	private static Integer imagesGlobalLock = 0;
+	private static final int THREADS_COUNT = 10;
 	private static List<String> pages;
-	private static HashMap<Integer, Integer> pagesState = new HashMap<>();
-	private static HashMap<String, Integer> pageURLToID = new HashMap<>();
 	private static ProgressBar pb;
 
-	public enum States {SKIP, CRAWL, RECRAWL}
-
-	;
-	private static int countIndexed;
-	private static Connection connection;
+	private static int pagesCount = 0;
+	private static int actualPagesCount = 0;
+	private static HashMap<Integer, Integer> pagesState = new HashMap<>();
+	private static HashMap<String, Integer> pageURLToID = new HashMap<>();
 	private static boolean commitThread = true, imageThread = true;
 	private static HashMap<String, Integer> globalWordsIDs = new HashMap<>();
+	private static HashMap<String, Integer> globalImageWordsIDs = new HashMap<>();
+
+	public enum States {SKIP, CRAWL, RECRAWL};
+	private static int countIndexed;
+	private static Connection connection;
+
 	private class Image {
 		public String description;
 		public String url;
@@ -102,60 +106,109 @@ public class Indexer implements Runnable {
 
 							wordsMap.put(stemmedWord, true);
 					}
-					String sql = "SELECT * FROM image WHERE url = ?";
-					PreparedStatement pst = connection.prepareStatement(sql);
-					pst.setString(1,image.url);
-					ResultSet rs = pst.executeQuery();
-					if (rs.next()) {
-						imageID = rs.getInt("id");
-					} else {
-						sql = "INSERT INTO image (url, description) VALUES (?, ?)";
-						pst = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-						pst.setString(1, image.url);
-						pst.setString(2, image.description);
-						pst.executeUpdate();
-						rs = pst.getGeneratedKeys();
-						skipRecrawlDeletion = true;
-						if (rs != null && rs.next()) {
-							imageID = rs.getInt(1);
-						}
+					String sql;
+					PreparedStatement pst;
+					ResultSet rs ;
+					sql = "INSERT IGNORE INTO image (url, description) VALUES (?, ?)";
+					pst = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+					pst.setString(1, image.url);
+					pst.setString(2, image.description);
+					pst.executeUpdate();
+					rs = pst.getGeneratedKeys();
+					if (rs != null && rs.next()) {
+						imageID = rs.getInt(1);
 					}
-					if (!skipRecrawlDeletion) {
-						sql = "UPDATE word_image INNER JOIN word_index_image " +
-								"ON word_image.id = word_index_image.word_id" +
-								" SET word_image.images_count = word_image.images_count - 1 " +
-								"WHERE word_index_image.image_id  = ? AND word_image.images_count > 0;";
-						pst = connection.prepareStatement(sql);
-						pst.setInt(1, imageID);
-						pst.executeUpdate();
-						sql = "DELETE FROM word_index_image WHERE image_id = ?";
-						pst = connection.prepareStatement(sql);
-						pst.setInt(1, imageID);
-						pst.executeUpdate();
-					}
+					else
+						continue;
+
+
+					//Populate word_index and word tables
+					sql = "SELECT ";
+					boolean first = true;
+					HashMap<String, Integer> wordsIDs = new HashMap<>();
+					HashMap<String, Boolean> neededWordsIDs = new HashMap<>();
+					Integer wordID;
+					Queue<String> newWordsQueue = new LinkedList<>();
 					for (HashMap.Entry<String, Boolean> entry : wordsMap.entrySet()) {
-						sql = "SELECT * FROM word_image WHERE word = ?";
-						pst = connection.prepareStatement(sql);
-						pst.setString(1, entry.getKey());
-						rs = pst.executeQuery();
-						int wordID = -1;
-						if (!rs.next()) {
-							sql = "INSERT IGNORE INTO word_image (word, images_count) VALUES (?, 0)";
-							pst = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-							pst.setString(1, entry.getKey());
-							pst.executeUpdate();
-							rs = pst.getGeneratedKeys();
-							if (rs != null && rs.next()) {
-								wordID = rs.getInt(1);
+						synchronized (globalImageWordsIDs) {
+							if (globalImageWordsIDs.containsKey(entry.getKey())) {
+								wordsIDs.put(entry.getKey(), globalImageWordsIDs.get(entry.getKey()));
+							} else {
+								neededWordsIDs.put(entry.getKey(), true);
 							}
 						}
+					}
+					for (HashMap.Entry<String, Boolean> entry : neededWordsIDs.entrySet()) {
+						if (globalImageWordsIDs.containsKey(entry.getKey())) {
+							wordsIDs.put(entry.getKey(), globalImageWordsIDs.get(entry.getKey()));
+							continue;
+						}
 
-						sql = "INSERT IGNORE INTO word_index_image (word_id, image_id) VALUES (?, ?)";
-						pst = connection.prepareStatement(sql);
+						if (!first) {
+							sql = sql + ',';
+						} else {
+							first = false;
+						}
+
+						String prepText = " (SELECT id FROM word_image  WHERE  word = '" + entry.getKey()
+								+ "')AS t_" + entry.getKey();
+						sql = sql + prepText;
+					}
+					pst = connection.prepareStatement(sql);
+					String sql2 = "INSERT INTO word_image (word, images_count) VALUES (?, 0)";
+					PreparedStatement pst2 = connection.prepareStatement(sql2, Statement.RETURN_GENERATED_KEYS);
+					if (!first) {
+						synchronized (imagesGlobalLock) {
+							rs = pst.executeQuery();
+							rs.next();
+							for (HashMap.Entry<String, Boolean> entry : neededWordsIDs.entrySet()) {
+								if (globalImageWordsIDs.containsKey(entry.getKey())) {
+									wordsIDs.put(entry.getKey(), globalImageWordsIDs.get(entry.getKey()));
+									continue;
+								}
+								wordID = rs.getInt("t_" + entry.getKey());
+								if (!rs.wasNull()) {
+									wordsIDs.put(entry.getKey(), wordID);
+								} else {
+
+									pst2.setString(1, entry.getKey());
+									pst2.addBatch();
+									newWordsQueue.add(entry.getKey());
+
+								}
+							}
+							pst2.executeBatch();
+							rs = pst2.getGeneratedKeys();
+							while (rs != null && rs.next()) {
+								wordID = rs.getInt(1);
+								String word = newWordsQueue.poll();
+								if (word != null) {
+									synchronized (globalImageWordsIDs) {
+										globalImageWordsIDs.put(word, wordID);
+									}
+									wordsIDs.put(word, wordID);
+								} else
+									throw new Exception("words queue failed");
+							}
+						}
+					}
+
+					if (wordsMap.size() != wordsIDs.size())
+						throw new Exception("words queue failed");
+
+
+
+					sql = "INSERT IGNORE INTO word_index_image (word_id, image_id) VALUES (?, ?)";
+					pst = connection.prepareStatement(sql);
+					for (HashMap.Entry<String, Integer> entry : wordsIDs.entrySet()) {
+						wordID = entry.getValue();
+
 						pst.setInt(1, wordID);
 						pst.setInt(2, imageID);
-						pst.executeUpdate();
+						pst.addBatch();
 					}
+					pst.executeBatch();
+
 					sql = "UPDATE word_image INNER JOIN word_index_image ON word_image.id = word_index_image.word_id" +
 							" SET word_image.images_count = word_image.images_count + 1 " +
 							"WHERE word_index_image.image_id  = ?;";
@@ -169,7 +222,52 @@ public class Indexer implements Runnable {
 			}
 		}
 	}
+	private static String returnDocument(Document doc)
+	{
+		Elements data;
+		String docString = "";
 
+		data = doc.select("meta[name=description]");
+		docString = docString + " " + data.text();
+
+		data = doc.select("title");
+		docString = docString + " " + data.text();
+
+		data = doc.getElementsByAttribute("pubdate");
+		docString = docString + " " + data.text();
+
+		data = doc.getElementsByAttribute("itemprop");
+		docString = docString + " " + data.text();
+
+		data = doc.select("h1");
+		docString = docString + " " + data.text();
+
+		data = doc.select("h2");
+		docString = docString + " " + data.text();
+
+		data = doc.select("h3");
+		docString = docString + " " + data.text();
+
+		data = doc.select("h4");
+		docString = docString + " " + data.text();
+
+		data = doc.select("h5");
+		docString = docString + " " + data.text();
+
+		data = doc.select("h6");
+		docString = docString + " " + data.text();
+
+		data = doc.select("b");
+		docString = docString + " " + data.text();
+
+		data = doc.select("p");
+		docString = docString + " " + data.text();
+
+		data = doc.select("strong");
+		docString = docString + " " + data.text();
+
+		return docString;
+	}
 	public void run() {
 		int threadNumber = Integer.valueOf(Thread.currentThread().getName());
 		if (threadNumber == THREADS_COUNT) {
@@ -303,7 +401,7 @@ public class Indexer implements Runnable {
 				}
 
 
-				String[] words = doc.text().split("[^\\\\s\\w\\u0600-\\u06FF]|[\\\\]");
+				String[] words = returnDocument(doc).split("[^\\\\s\\w\\u0600-\\u06FF]|[\\\\]");
 				ArrayList<String> wordsList = new ArrayList<String>(Arrays.asList(words));
 				HashMap<String, Integer> hm = new HashMap<String, Integer>();
 				HashMap<String, String> hmIndices = new HashMap<String, String>();
@@ -325,6 +423,7 @@ public class Indexer implements Runnable {
 
 				for (int i = 0; i < wordsListSize; i++) {
 					String word = wordsList.get(i);
+					word = word.substring(0, Math.min(word.length(), 30));
 					if (word.equals(""))//|| stopWords.containsKey(word))
 					{
 						wordsList.remove(i);
@@ -334,7 +433,6 @@ public class Indexer implements Runnable {
 						String stemmedWord;
 						if (!isArabic(word)) {
 							word = word.toLowerCase();
-							word = word.substring(0, Math.min(word.length(), 500));
 							stemmer.setCurrent(word);
 							stemmer.stem();
 							stemmedWord = stemmer.getCurrent();
@@ -365,8 +463,7 @@ public class Indexer implements Runnable {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-
-
+				boolean print = true;
 				//Database Access
 				try {
 					PreparedStatement pst;
@@ -424,7 +521,6 @@ public class Indexer implements Runnable {
 //					synchronized (dbManager) {
 
 					//Populate word_index and word tables
-					long start = System.currentTimeMillis();
 					sql = "SELECT ";
 					boolean first = true;
 					HashMap<String, Integer> wordsIDs = new HashMap<>();
@@ -440,51 +536,48 @@ public class Indexer implements Runnable {
 							}
 						}
 					}
+					for (HashMap.Entry<String, Boolean> entry : neededWordsIDs.entrySet()) {
+						if (globalWordsIDs.containsKey(entry.getKey())) {
+							wordsIDs.put(entry.getKey(), globalWordsIDs.get(entry.getKey()));
+							continue;
+						}
 
-					synchronized (dbManager) {
-						for (HashMap.Entry<String, Boolean> entry : neededWordsIDs.entrySet()) {
-							synchronized (globalWordsIDs) {
+						if (!first) {
+							sql = sql + ',';
+						} else {
+							first = false;
+						}
+
+						String prepText = " (SELECT id FROM word  WHERE  word = '" + entry.getKey()
+								+ "')AS t_" + entry.getKey();
+						sql = sql + prepText;
+					}
+					superQ = sql;
+					pst = connection.prepareStatement(sql);
+					String sql2 = "INSERT INTO word (word, pages_count) VALUES (?, 0)";
+					PreparedStatement pst2 = connection.prepareStatement(sql2, Statement.RETURN_GENERATED_KEYS);
+					if (!first) {
+						synchronized (dbManager) {
+							rs = pst.executeQuery();
+							rs.next();
+							for (HashMap.Entry<String, Boolean> entry : neededWordsIDs.entrySet()) {
 								if (globalWordsIDs.containsKey(entry.getKey())) {
 									wordsIDs.put(entry.getKey(), globalWordsIDs.get(entry.getKey()));
 									continue;
 								}
-							}
-							if (!first) {
-								sql = sql + ',';
-							} else {
-								first = false;
-							}
-
-							String prepText = " (SELECT id FROM word  WHERE  word = '" + entry.getKey()
-									+ "')AS table_" + entry.getKey();
-							sql = sql + prepText;
-						}
-						if (!first) {
-							superQ = sql;
-							pst = connection.prepareStatement(sql);
-							rs = pst.executeQuery();
-							rs.next();
-							sql = "INSERT INTO word (word, pages_count) VALUES (?, 0)";
-							pst = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-
-
-							for (HashMap.Entry<String, Boolean> entry : neededWordsIDs.entrySet()) {
-								if (globalWordsIDs.containsKey(entry.getKey()))
-									continue;
-								wordID = rs.getInt("table_" + entry.getKey());
+								wordID = rs.getInt("t_" + entry.getKey());
 								if (!rs.wasNull()) {
 									wordsIDs.put(entry.getKey(), wordID);
 								} else {
 
-									pst.setString(1, entry.getKey());
-									pst.addBatch();
+									pst2.setString(1, entry.getKey());
+									pst2.addBatch();
 									newWordsQueue.add(entry.getKey());
 
 								}
 							}
-//						System.out.println(p + " " + (System.currentTimeMillis()-start)/1000);
-							pst.executeBatch();
-							rs = pst.getGeneratedKeys();
+							pst2.executeBatch();
+							rs = pst2.getGeneratedKeys();
 							while (rs != null && rs.next()) {
 								wordID = rs.getInt(1);
 								String word = newWordsQueue.poll();
@@ -498,36 +591,49 @@ public class Indexer implements Runnable {
 							}
 						}
 					}
+
+
 					if (hm.size() != wordsIDs.size())
 						throw new Exception("words queue failed");
 
 					sql = "INSERT INTO word_index (page_id, word_id, count, important) VALUES (?, ?, ?, ?);";
 					pst = connection.prepareStatement(sql);
-					String sql2 = "INSERT IGNORE INTO word_positions (page_id, word_id, position) VALUES (?, ?, ?);";
-					PreparedStatement pst2 = connection.prepareStatement(sql2);
+					sql2 = "INSERT IGNORE INTO word_positions (page_id, word_id, position) VALUES (?, ?, ?);";
+					pst2 = connection.prepareStatement(sql2);
+					int count = 0;
+
+
 					for (HashMap.Entry<String, Integer> entry : hm.entrySet()) {
+						count++;
+
+
 						pst.setInt(1, thisPageID);
 						pst.setInt(2, wordsIDs.get(entry.getKey()));
 						pst.setInt(3, entry.getValue());
 						pst.setBoolean(4, importantWords.containsKey(entry.getKey()));
 						pst.addBatch();
-
+						if(count %50 == 49) pst.executeBatch();
 						String indices = hmIndices.get(entry.getKey());
 						String[] wordPositions = indices.split("[,]");
-						ArrayList<String> wordPositionsList = new ArrayList<>(Arrays.asList(wordPositions));
-						int wordPositionsSize = wordPositionsList.size();
+						int wordPositionsSize = wordPositions.length;
+
+
 						for (int i = 0; i < wordPositionsSize; i++) {
-							if (wordPositionsList.get(i).contentEquals(""))
+							if (wordPositions[i].contentEquals(""))
 								continue;
 							pst2.setInt(1, thisPageID);
 							pst2.setInt(2, wordsIDs.get(entry.getKey()));
-							pst2.setInt(3, Integer.valueOf(wordPositionsList.get(i)));
+							pst2.setInt(3, Integer.valueOf(wordPositions[i]));
 							pst2.addBatch();
 
 						}
+						if(count %50 == 49) pst2.executeBatch();
+
 					}
+
 					pst.executeBatch();
 					pst2.executeBatch();
+
 					sql = "UPDATE word INNER JOIN word_index ON word.id = word_index.word_id " +
 							"SET word.pages_count = word.pages_count + 1 WHERE word_index.page_id  = ?;";
 					pst = connection.prepareStatement(sql);
@@ -536,6 +642,7 @@ public class Indexer implements Runnable {
 
 					synchronized (commitOrder) {
 						{
+							pagesState.put(thisPageID, States.valueOf("SKIP").ordinal());
 							countIndexed++;
 							if (countIndexed % 10 == 9) {
 								commitOrder.add(true);
@@ -595,7 +702,7 @@ public class Indexer implements Runnable {
 			tCommit.setName(Integer.toString(THREADS_COUNT));
 			tCommit.start();
 			List<Thread> threadsImages = new ArrayList<>();
-			for (int i = THREADS_COUNT + 1; i < (int) (1.25 * THREADS_COUNT); i++) {
+			for (int i = THREADS_COUNT + 1; i < (int) (ceil(1.25 * THREADS_COUNT)); i++) {
 				Thread tImage = new Thread(new Indexer(dbManager));
 				tImage.setName(Integer.toString(i));
 				threadsImages.add(tImage);
@@ -606,7 +713,7 @@ public class Indexer implements Runnable {
 					threads.get(i).join();
 				}
 				imageThread = false;
-				for (int i = THREADS_COUNT + 1; i < (int) (1.25 * THREADS_COUNT); i++) {
+				for (int i = THREADS_COUNT + 1; i < (int)  (ceil(1.25 * THREADS_COUNT)); i++) {
 					threadsImages.get(i - THREADS_COUNT - 1).join();
 				}
 				commitThread = false;
@@ -638,6 +745,17 @@ public class Indexer implements Runnable {
 	private static void initializePages(Connection connection) {
 
 		try {
+
+			pagesCount = 0;
+			actualPagesCount = 0;
+			pagesState = new HashMap<>();
+			pageURLToID = new HashMap<>();
+			commitThread = true;
+			imageThread = true;
+			globalWordsIDs = new HashMap<>();
+			globalImageWordsIDs = new HashMap<>();
+
+
 			connection.setAutoCommit(false);
 			String sql = "SELECT * from test_search_engine.page";
 			PreparedStatement pst = connection.prepareStatement(sql);
