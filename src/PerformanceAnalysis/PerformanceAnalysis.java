@@ -5,6 +5,7 @@ import database_manager.DatabaseManager;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -37,8 +38,8 @@ public class PerformanceAnalysis implements Runnable {
         resBuilder.append(connection.getResponseCode()).append(" ").append(connection.getResponseMessage()).append("\n");
         connection.getHeaderFields().entrySet().stream().filter(entry -> entry.getKey() != null).forEach(entry -> {
             resBuilder.append(entry.getKey()).append(": ");
-            List headerValues = entry.getValue();
-            Iterator it = headerValues.iterator();
+            List <String> headerValues = entry.getValue();
+            Iterator <String> it = headerValues.iterator();
             if (it.hasNext()) {
                 resBuilder.append(it.next());
                 while (it.hasNext()) {
@@ -50,12 +51,12 @@ public class PerformanceAnalysis implements Runnable {
         return resBuilder.toString();
     }
 
-    private static String build_request_url(Map<String, String> parameters) throws UnsupportedEncodingException {
+    private static String build_request_url(Map<String, String> parameters) {
         StringBuilder req = new StringBuilder();
         for (Map.Entry<String, String> entry : parameters.entrySet()) {
-            req.append(URLEncoder.encode(entry.getKey(), "UTF-8"));
+            req.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8));
             req.append("=");
-            req.append(URLEncoder.encode(entry.getValue(), "UTF-8"));
+            req.append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
             req.append("&");
         }
         String reqStr = req.toString();
@@ -70,7 +71,7 @@ public class PerformanceAnalysis implements Runnable {
             parameters.put("text", PerformanceAnalysis.searchText);
             parameters.put("user", "1");
             parameters.put("page", String.valueOf(PerformanceAnalysis.pageNum));
-            String url = PerformanceAnalysis.baseUrl + this.build_request_url(parameters);
+            String url = PerformanceAnalysis.baseUrl + build_request_url(parameters);
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(PerformanceAnalysis.CONNECT_TIME_OUT);
@@ -105,7 +106,7 @@ public class PerformanceAnalysis implements Runnable {
         List<Integer> keyWordsSizeList = new ArrayList<>();
         List<Double> latencyList = new ArrayList<>();
 
-        int numOfCrawledPages = 0;
+        int numOfCrawledPages , sizeOfIndexTable = 0;
         while(true) {
             // 3. How is the search request latency of your solution affected by the number of web pages crawled?
             try {
@@ -126,7 +127,7 @@ public class PerformanceAnalysis implements Runnable {
                 String sql = "SELECT COUNT(*) AS total FROM page WHERE indexed_time IS NOT NULL;";
                 ResultSet res = stm.executeQuery(sql);
                 res.next();
-                int sizeOfIndexTable = res.getInt("total");
+                sizeOfIndexTable = res.getInt("total");
                 sizeOfIndexTableList.add(sizeOfIndexTable);
                 res.close();
                 stm.close();
@@ -158,7 +159,7 @@ public class PerformanceAnalysis implements Runnable {
             long end = System.currentTimeMillis();
             long elapsedTime = end - start;
             latencyList.add((double)elapsedTime);
-            if(Crawler.MAX_WEBSITES <= numOfCrawledPages) {
+            if(Crawler.MAX_WEBSITES <= sizeOfIndexTable) {
                 break;
             }
             try {
