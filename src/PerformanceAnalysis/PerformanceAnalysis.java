@@ -15,18 +15,17 @@ import java.util.concurrent.TimeUnit;
 
 public class PerformanceAnalysis implements Runnable {
 
-    // final static Query processor
-    public static final DatabaseManager dbManager = new DatabaseManager(); // database manager instance
-    public final static int startNumOfThreads = 1;
-    public final static int numThreadsStep = 1;
-    public final static int secondsBeforeRun = 1;
-    public final static int connectTimeOut = 5000;
-    public final static int readTimeOut = 5000;
+    public static final DatabaseManager dbManager = new DatabaseManager();  // Database manager instance
+    public final static int startNumOfThreads = 1;                          // could be any number
+    public final static int numThreadsStep = 1;                             // could be any number
+    public final static int secondsBeforeRunAgain = 0;
+    public static final int connectTimeOut = 5000;
+    public static final int readTimeOut = 5000;
     public static int numOfThreads = startNumOfThreads;
     public static int maxNumHandeledRequests = 0;
-    private final static  String baseUrl = "http://localhost:8080/api/v1/get-results?";
-    private final static String searchText = "Sorting algorithms";
-    private final static int pageNum = 1;
+    private static final String baseUrl = "http://localhost:8080/api/v1/get-results?";
+    private static final String searchText = "Sorting algorithms";
+    private static final int pageNum = 1;
     private static boolean isFailed = false;
     public static final Object LOCK_IS_FAILED = new Object();
 
@@ -66,7 +65,7 @@ public class PerformanceAnalysis implements Runnable {
         try {
             Map<String, String> parameters = new HashMap<>();
             parameters.put("text", PerformanceAnalysis.searchText);
-            parameters.put("user", Thread.currentThread().getName());
+            parameters.put("user", "1");
             parameters.put("page", String.valueOf(PerformanceAnalysis.pageNum));
             String url = PerformanceAnalysis.baseUrl + this.build_request_url(parameters);
             HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
@@ -74,27 +73,11 @@ public class PerformanceAnalysis implements Runnable {
             connection.setConnectTimeout(PerformanceAnalysis.connectTimeOut);
             connection.setReadTimeout(PerformanceAnalysis.readTimeOut);
             int status = connection.getResponseCode();
-            System.out.println("status: " + status);
-            if (status == 405) { // status > 299 // error // 405 timeout error
-                /*
-                Reader = streamReader = new InputStreamReader(connection.getErrorStream());
-                BufferedReader in = new BufferedReader(streamReader);
-                String inputLine;
-                StringBuilder content = new StringBuilder();
-                while ((inputLine = in.readLine()) != null) {
-                    content.append(inputLine);
-                }
-                System.out.println(content.toString());
-                in.close();
-                 */
-                //                String response = get_full_response(connection);
-                connection.disconnect();
-                ret = true;
-            } else {
-                connection.disconnect();
-            }
+//            System.out.println("status: " + status);
+            // status > 299 // error // 405 timeout error
+            connection.disconnect();
         } catch (SocketTimeoutException e) {
-            System.out.println("Time Out!");
+            System.out.println("Time Out!, Thread Number: " + Thread.currentThread().getName());
             ret = true;
         } catch (IOException e) {
             System.out.println("Not Time Out!");
@@ -136,7 +119,7 @@ public class PerformanceAnalysis implements Runnable {
 
         while(true) {
             // 3. How is the search req uest latency of your solution affected by the number of web pages crawled?
-            System.out.println("-------------------------------------------------------");
+//            System.out.println("-------------------------------------------------------");
             try {
                 Statement stm = connection.createStatement();
                 String sql = "SELECT COUNT(*) AS total FROM page;";
@@ -175,6 +158,7 @@ public class PerformanceAnalysis implements Runnable {
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
+            System.out.println("Try simultaneous search requests = " + threads.size());
 
             // Run threads
             for (final Thread thread : threads) {
@@ -209,9 +193,9 @@ public class PerformanceAnalysis implements Runnable {
             }
 
             // Sleep if you want
-            if(PerformanceAnalysis.secondsBeforeRun > 0){
+            if(PerformanceAnalysis.secondsBeforeRunAgain > 0){
                 try {
-                    TimeUnit.SECONDS.sleep(PerformanceAnalysis.secondsBeforeRun);
+                    TimeUnit.SECONDS.sleep(PerformanceAnalysis.secondsBeforeRunAgain);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
