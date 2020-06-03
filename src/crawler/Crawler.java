@@ -385,10 +385,10 @@ public class Crawler implements Runnable {
                             }
                         } else {
                             /* delete from db */
-                            // delete_from_db(connection, crawledURL.url, crawledURL.id);
+                            delete_from_db(connection, crawledURL.url, crawledURL.id);
                             /* delete from HDD */
-                            // File toDeleteFile = new File(outputFolderBase+crawledURL.id+".html");
-                            // toDeleteFile.delete();
+                            File toDeleteFile = new File(outputFolderBase+crawledURL.id+".html");
+                            toDeleteFile.delete();
                         }
                     }
                 } catch (IOException e) {
@@ -572,11 +572,6 @@ public class Crawler implements Runnable {
                             + ", crawling new url in recrawling: " + url);
                     Document urlContent = save_url_to_db(connection, url.toString(), -1);
                 } catch (IOException e) {
-//                    synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
-//                        if(this.enqueue_state(connection, crawledURL)) {
-//                            Crawler.linksQueue.add(crawledURL);
-//                        }
-//                    }
                     System.out.println(
                             "_________________________________________________________________________________________");
                     System.out.println("Error IO-Exception while crawling new Recrawled links: " + crawledURL);
