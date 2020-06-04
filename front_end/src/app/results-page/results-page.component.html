@@ -25,7 +25,7 @@
         <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="ImageSearch()">
             <mat-icon>image</mat-icon>
         </button>
-        <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="listen()">
+        <button *ngIf="chrome" mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="listen()">
             <mat-icon [ngStyle]="{'color': listening ? 'red' : nochange}">mic</mat-icon>
         </button>
 
