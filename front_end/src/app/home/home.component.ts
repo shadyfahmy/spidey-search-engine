@@ -20,7 +20,8 @@ export class HomeComponent implements OnInit {
   listening = false;
   night = false;
   
-  recognition = new webkitSpeechRecognition;
+  recognition: any
+  chrome = false;
 
   constructor( private route: ActivatedRoute, private router: Router,
      private apiService: ApiService ) { }
@@ -58,6 +59,8 @@ export class HomeComponent implements OnInit {
     if (typeof webkitSpeechRecognition === "undefined") {
       console.log("error")
     } else {
+      this.recognition = new webkitSpeechRecognition;
+      this.chrome = true;
       this.recognition.continuous = true;
       this.recognition.interimResults = true;
       this.recognition.addEventListener("result", this.onResult);

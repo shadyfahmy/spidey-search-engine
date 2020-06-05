@@ -479,7 +479,7 @@ public class Indexer implements Runnable {
 							pst = connection.prepareStatement(sql);
 							pst.setInt(1, thisPageID);
 							pst.executeUpdate();
-							sql = "DELETE FROM word_positions WHERE from_page_id = ?";
+							sql = "DELETE FROM word_positions WHERE page_id = ?";
 							pst = connection.prepareStatement(sql);
 							pst.setInt(1, thisPageID);
 							pst.executeUpdate();

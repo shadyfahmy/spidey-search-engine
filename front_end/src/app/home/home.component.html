@@ -21,7 +21,7 @@
         <button mat-button *ngIf="value" matSuffix mat-icon-button aria-label="Clear" (click)="value=''">
             <mat-icon>close</mat-icon>
         </button>
-        <button mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="listen()">
+        <button *ngIf="chrome" mat-button  matSuffix mat-icon-button aria-label="Clear" (click)="listen()">
             <mat-icon [ngStyle]="{'color': listening ? 'red' : nochange}">mic</mat-icon>
         </button>
     </div>
