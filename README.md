@@ -56,7 +56,7 @@ GRANT ALL PRIVILEGES ON test_search_engine.* TO 'admin'@'localhost';
 ```
 5. Run [Crawler](/src/crawler/Crawler.java) (preferred to wait 5 minutes before moving to the next step)
 6. Run [Indexer](/src/indexer/Indexer.java)
-7. Run [Query Processor](/query_processor/src/main/java/com/search/queryprocessor/QueryprocessorApplication.java) (wait until it lauches to move to next step)
+7. Run [Query Processor](/query_processor/src/main/java/com/search/queryprocessor/QueryprocessorApplication.java) (wait until it lauches to move to the next step)
 8. Run [Performance Analysis](/src/performance_analysis/PerformanceAnalysis.java)
 
 ---
