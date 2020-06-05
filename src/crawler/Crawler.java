@@ -385,10 +385,10 @@ public class Crawler implements Runnable {
                             }
                         } else {
                             /* delete from db */
-                            delete_from_db(connection, crawledURL.url, crawledURL.id);
+                            // delete_from_db(connection, crawledURL.url, crawledURL.id);
                             /* delete from HDD */
-                            File toDeleteFile = new File(outputFolderBase+crawledURL.id+".html");
-                            toDeleteFile.delete();
+                            // File toDeleteFile = new File(outputFolderBase+crawledURL.id+".html");
+                            // toDeleteFile.delete();
                         }
                     }
                 } catch (IOException e) {
