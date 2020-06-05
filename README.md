@@ -62,7 +62,7 @@ Fully working search engine which can search by text, image or voice , it also h
 :memo: Note: use google chrome because we use its API in speech recognition.
 
 
-## :chart_with_upwards_trend:Analysis
+## :chart_with_upwards_trend: Analysis
 This analysis has been made with this parameters using [Performance Analysis](/src/performance_analysis/PerformanceAnalysis.java) module
 ```
 public static final int MAX_WEBSITES = 500;
