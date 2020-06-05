@@ -21,6 +21,8 @@ Fully working search engine which can search by text, image or voice , it also h
 - java
 - javac
 - mysql-server
+- npm
+- angular-cli
 
 ## 📝 Modules
 
@@ -59,9 +61,20 @@ GRANT ALL PRIVILEGES ON test_search_engine.* TO 'admin'@'localhost';
 7. Run [Query Processor](/query_processor/src/main/java/com/search/queryprocessor/QueryprocessorApplication.java) (wait until it lauches to move to the next step)
 8. Run [Performance Analysis](/src/performance_analysis/PerformanceAnalysis.java)
 
+## How to Run Front-End
+1. Run [Query Processor](/query_processor/src/main/java/com/search/queryprocessor/QueryprocessorApplication.java) (wait until it lauches to move to the next step)
+2. Open front end folder
+```
+cd front_end/
+```
+2. ``` npm install ```
+3. Run ```ng serve``` for a dev server. Navigate to http://localhost:4200/. The app will automatically reload if you change any of the source files 
+
+:memo: Note: use google chrome because we use browser API in speech recognition.
+
 ---
 
-## Analysis
+## :chart_with_upwards_trend:Analysis
 This analysis has been made with this parameters using [Performance Analysis](/src/performance_analysis/PerformanceAnalysis.java) module
 ```
 public static final int MAX_WEBSITES = 500;
@@ -83,6 +96,7 @@ public final static int SECONDS_TO_SLEEP = 5;
 ## Screenshots
 
 ---
+
 # Developers
 
 <center>
