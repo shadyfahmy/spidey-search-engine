@@ -124,8 +124,8 @@ public class Crawler implements Runnable {
             add(".svg");
             add(".ai");
             add(".eps");
-            // add(".pdf"); // not html
-            // add(".ppt"); // not html
+            add(".pdf"); // not html
+            add(".ppt"); // not html
         }
     };
 
