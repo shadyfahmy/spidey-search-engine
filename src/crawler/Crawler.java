@@ -64,7 +64,7 @@ public class Crawler implements Runnable {
     public static final Object LOCK_LINKS_DB_FAIL = new Object();                               // fail list lock
     public static List<String> failedLinksList = new ArrayList<>();                             // linksQueue lock
     public static Queue<String> linksQueue = new LinkedList<>();                                // linksQueue lock
-    public static HashMap<String, UrlInDB> visitedLinks = new HashMap<>();       // visited links list
+    public static HashMap<String, UrlInDB> visitedLinks = new HashMap<>();                      // visited links list
 
     private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();                       // recrawling urls queue
     // array of connections every thread has a connection with the sql server
