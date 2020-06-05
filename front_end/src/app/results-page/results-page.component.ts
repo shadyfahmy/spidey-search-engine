@@ -29,7 +29,8 @@ export class ResultsPageComponent implements OnInit {
   imageSearch = false;
   page: number;
   next = false;
-  recognition = new webkitSpeechRecognition;
+  recognition:any;
+  chrome = false;
 
   constructor(private apiService: ApiService,
       private route: ActivatedRoute,
@@ -78,6 +79,8 @@ export class ResultsPageComponent implements OnInit {
     if (typeof webkitSpeechRecognition === "undefined") {
       console.log("error")
     } else {
+      this.recognition = new webkitSpeechRecognition;
+      this.chrome = true;
       this.recognition.continuous = true;
       this.recognition.interimResults = true;
       this.recognition.addEventListener("result", this.onResult);
@@ -135,9 +138,7 @@ export class ResultsPageComponent implements OnInit {
   }
 
   Search() {
-    console.log("preshit")
     if(this.value.replace(/\s/g, '') != ""){
-      console.log("shit")
       this.imageSearch = false;
       this.apiService.saveQuery(this.value).subscribe(data => {
       });

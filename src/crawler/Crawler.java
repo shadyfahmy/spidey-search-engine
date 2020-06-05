@@ -27,7 +27,7 @@ public class Crawler implements Runnable {
             this.date = date;
             this.id = id;
         }
-    };
+    }
 
     private static class UrlInDB {
         public java.util.Date date;
@@ -36,7 +36,7 @@ public class Crawler implements Runnable {
             this.date = date;
             this.id = id;
         }
-    };
+    }
 
     // max number of website to crawl may be more but not less
     public static final int MAX_WEBSITES = 5500;
@@ -64,13 +64,13 @@ public class Crawler implements Runnable {
     public static final Object LOCK_LINKS_DB_FAIL = new Object();                               // fail list lock
     public static List<String> failedLinksList = new ArrayList<>();                             // linksQueue lock
     public static Queue<String> linksQueue = new LinkedList<>();                                // linksQueue lock
-    public static HashMap<String, UrlInDB> visitedLinks = new HashMap<String, UrlInDB>();       // visited links list
+    public static HashMap<String, UrlInDB> visitedLinks = new HashMap<>();                      // visited links list
 
     private static Queue<UrlObject> recrawlingQueue = new LinkedList<>();                       // recrawling urls queue
     // array of connections every thread has a connection with the sql server
     private static List<Connection> connections = new ArrayList<>();
     // blocked extensions from crawling
-    private final List<String> extensions = new ArrayList<String>() {
+    private final List<String> extensions = new ArrayList<>() {
         {
             // videos
             add(".gif");
@@ -124,8 +124,8 @@ public class Crawler implements Runnable {
             add(".svg");
             add(".ai");
             add(".eps");
-            // add(".pdf"); // not html
-            // add(".ppt"); // not html
+            add(".pdf"); // not html
+            add(".ppt"); // not html
         }
     };
 
@@ -139,7 +139,7 @@ public class Crawler implements Runnable {
     /* dequeue url from state table */
     private boolean dequeue_state(Connection connection) {
         try {
-            String query = String.format("DELETE FROM state LIMIT 1;");
+            String query = "DELETE FROM state LIMIT 1;";
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate(query);
             return true;
@@ -175,7 +175,7 @@ public class Crawler implements Runnable {
                 pst.setString(1, url);
                 pst.addBatch();
             }
-            pst.executeBatch();
+            pst.executeLargeBatch();
             connection.setAutoCommit(true);
             return true;
         } catch (SQLException e) {
@@ -187,7 +187,7 @@ public class Crawler implements Runnable {
 
     private boolean clear_state(Connection connection) {
         try{
-            String query = String.format("DELETE FROM state;");
+            String query = "DELETE FROM state;";
             Statement stmt = connection.createStatement();
             int rowsAffected = stmt.executeUpdate(query);
             return true;
@@ -220,7 +220,7 @@ public class Crawler implements Runnable {
             String robotPath = rootPath + "/robots.txt";
             // System.out.println(robotPath);
             try (BufferedReader in = new BufferedReader(new InputStreamReader(new URL(robotPath).openStream()))) {
-                String line = null;
+                String line;
                 boolean flag = false;
                 final String disallowStartWith = "disallow:";
                 final String userAgentStartWith = "user-agent:";
@@ -274,9 +274,7 @@ public class Crawler implements Runnable {
                     }
                 }
             return false;
-        } catch (URISyntaxException e) {
-            return false;
-        } catch (IllegalArgumentException e) {
+        } catch (URISyntaxException | IllegalArgumentException e) {
             return false;
         }
     }
@@ -285,7 +283,7 @@ public class Crawler implements Runnable {
         if (urlStr == null) {
             return null;
         }
-        String path = new String(urlStr);
+        String path = urlStr;
         if (path != null) {
             String http = "http:/";
             String https = "https:/";
@@ -368,7 +366,7 @@ public class Crawler implements Runnable {
                             System.out.println(
                                     "_________________________________________________________________________________________");
                             final Elements linksFound = urlContent.select("a[href]");
-                            List<String> urls = new ArrayList<String>();
+                            List<String> urls = new ArrayList<>();
                             for (final Element link : linksFound) {
                                 final String urlText = link.attr("abs:href");
                                 String path = normalizeUrl(urlText); // URL Normalization
@@ -472,7 +470,7 @@ public class Crawler implements Runnable {
                         if (remainingLinksCount <= 0) {
                             continue; // continue downloading pages
                         }
-                        List<String> urls = new ArrayList<String>();
+                        List<String> urls = new ArrayList<>();
 
                         final Elements linksFound = urlContent.select("a[href]");
 
@@ -574,11 +572,6 @@ public class Crawler implements Runnable {
                             + ", crawling new url in recrawling: " + url);
                     Document urlContent = save_url_to_db(connection, url.toString(), -1);
                 } catch (IOException e) {
-//                    synchronized (Crawler.LOCK_LINKS_QUEUE) { // try again later by pushing in the end of queue
-//                        if(this.enqueue_state(connection, crawledURL)) {
-//                            Crawler.linksQueue.add(crawledURL);
-//                        }
-//                    }
                     System.out.println(
                             "_________________________________________________________________________________________");
                     System.out.println("Error IO-Exception while crawling new Recrawled links: " + crawledURL);
@@ -598,9 +591,9 @@ public class Crawler implements Runnable {
     public Document save_url_to_db(Connection connection, String url, int updateId) throws IOException{
         Document urlContent = null;
         try {
-            urlContent = Jsoup.connect(url.toString()).get();
+            urlContent = Jsoup.connect(url).get();
             Date date = new Date(System.currentTimeMillis());
-            String query = "";
+            String query;
             if(updateId != -1) { // update
                 query = String.format("UPDATE page SET url='%s',  crawled_time='%s' WHERE id=%d;", url, Crawler.formatter.format(date), updateId);
             }
@@ -676,7 +669,7 @@ public class Crawler implements Runnable {
         Crawler.formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
         boolean isRecrawling = false;
         try {
-            String query = String.format("SELECT * FROM page;");
+            String query = "SELECT * FROM page;";
             Connection connection = dbManager.getDBConnection();
             Statement statement = connection.createStatement();
             ResultSet result = statement.executeQuery(query);
@@ -694,7 +687,7 @@ public class Crawler implements Runnable {
             // check if in recrawling mode first // if yes don't load queue list
             isRecrawling = (Crawler.visitedLinks.size() >= Crawler.MAX_WEBSITES);
             if(!isRecrawling) {
-                query = String.format("SELECT * FROM state;");
+                query = "SELECT * FROM state;";
                 connection = dbManager.getDBConnection();
                 statement = connection.createStatement();
                 result = statement.executeQuery(query);

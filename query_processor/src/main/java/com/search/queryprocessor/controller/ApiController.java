@@ -38,17 +38,6 @@ public class ApiController {
         repository.save(query);
     }
 
-    /*
-    @ResponseBody
-    @RequestMapping(method = RequestMethod.GET, value = "/api/v1/paging")
-    public List<Query> getPage() {
-        return Arrays.asList(
-                new Query("test1"),
-                new Query("test2"),
-                new Query("test3")
-        );
-    }
-    */
 
     //Add new user to database and return the added user
     @ResponseBody
