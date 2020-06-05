@@ -15,6 +15,7 @@
 # :spider:Spidey:spider_web:
 Fully working search engine which can search by text, image or voice , it also has its own crawler, indexer, ranker, query engine and UI.
 
+---
 
 ## Dependencies
 - java
