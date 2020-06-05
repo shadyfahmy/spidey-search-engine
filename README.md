@@ -13,7 +13,7 @@
 </div>
 
 # :spider:Spidey:spider_web:
-Full working search engine which can search by text, image or voice , it also has its own crawler, indexer, ranker, query engine and UI.
+Fully working search engine which can search by text, image or voice , it also has its own crawler, indexer, ranker, query engine and UI.
 
 ---
 
