@@ -138,9 +138,7 @@ export class ResultsPageComponent implements OnInit {
   }
 
   Search() {
-    console.log("preshit")
     if(this.value.replace(/\s/g, '') != ""){
-      console.log("shit")
       this.imageSearch = false;
       this.apiService.saveQuery(this.value).subscribe(data => {
       });
