@@ -15,7 +15,6 @@
 # :spider:Spidey:spider_web:
 Fully working search engine which can search by text, image or voice , it also has its own crawler, indexer, ranker, query engine and UI.
 
----
 
 ## Dependencies
 - java
@@ -34,8 +33,6 @@ Fully working search engine which can search by text, image or voice , it also h
 * [Performace Analysis](/src/performance_analysis)
 * [DataBase Manager](/src/k2_algorithmic_warmup/database_manager)
 * [UI](/front_end)
-
----
 
 ## How to Run
 
@@ -72,7 +69,6 @@ cd front_end/
 
 :memo: Note: use google chrome because we use browser API in speech recognition.
 
----
 
 ## :chart_with_upwards_trend:Analysis
 This analysis has been made with this parameters using [Performance Analysis](/src/performance_analysis/PerformanceAnalysis.java) module
@@ -91,11 +87,9 @@ public final static int SECONDS_TO_SLEEP = 5;
 ### How is the search request latency of your solution affected by the ranking process?
 ![Latency VS Number Of KeyWords Of The Ranking Process](/analysis_readme/latency_vs_num_keywords.png)
 
----
 
 ## Screenshots
 
----
 
 # Developers
 
