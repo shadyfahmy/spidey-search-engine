@@ -1,4 +1,4 @@
-package PerformanceAnalysis;
+package performance_analysis;
 
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;

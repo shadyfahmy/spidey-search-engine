@@ -1,4 +1,4 @@
-package PerformanceAnalysis;
+package performance_analysis;
 
 import crawler.Crawler;
 import database_manager.DatabaseManager;
