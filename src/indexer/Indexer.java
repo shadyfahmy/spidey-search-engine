@@ -288,10 +288,13 @@ public class Indexer implements Runnable {
 		} else if (threadNumber > THREADS_COUNT) {
 			ImageThread();
 		} else {
-			for (int p = threadNumber + leastID; p <= pagesState.size(); p += THREADS_COUNT) {
-
+			for (int p = threadNumber + leastID; p <= pagesState.size()+1; p += THREADS_COUNT) {
+				int pageState;
 				int thisPageID = p;
-				int pageState = pagesState.get(thisPageID);
+				if(pagesState.containsKey(thisPageID))
+					pageState = pagesState.get(thisPageID);
+				else
+					continue;
 
 				boolean recrawl = false;
 				if (pageState == States.valueOf("SKIP").ordinal())
@@ -307,8 +310,31 @@ public class Indexer implements Runnable {
 					try {
 						doc = Jsoup.parse(input, "UTF-8", "");
 					} catch (IOException e) {
-						e.printStackTrace();
-
+						SimpleDateFormat formatter = new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
+						formatter.setTimeZone(TimeZone.getTimeZone("GMT"));
+						String sql;
+						PreparedStatement pst;
+						Date now = new Date(System.currentTimeMillis());
+						sql = "UPDATE page SET indexed_time = ? where (id = ?)";
+						try {
+							pst = connection.prepareStatement(sql);
+							pst.setString(1, formatter.format(now));
+							pst.setInt(2, thisPageID);
+							pst.executeUpdate();
+							synchronized (commitOrder) {
+								{
+									countIndexed++;
+									if (countIndexed % 10 == 9) {
+										commitOrder.add(true);
+									}
+								}
+							}
+						if (countIndexed > BATCH_SIZE - THREADS_COUNT)
+							break;
+						} catch (SQLException e1) {
+							e1.printStackTrace();
+						}
+						continue;
 					}
 					String title = doc.title();
 					title = title.substring(0, Math.min(title.length(), 250));
@@ -646,8 +672,6 @@ public class Indexer implements Runnable {
 			}
 		}
 	}
-
-
 	public static void main(String args[]) {
 		double expectedTime = 0;
 		while(true) {
@@ -657,19 +681,18 @@ public class Indexer implements Runnable {
 			imageThread = true;
 			dbManager = new DatabaseManager();
 			Connection initialConnection = dbManager.getDBConnection();
-			String disableIndexing = "ALTER TABLE `word` DISABLE KEYS;";
-			String disableImageIndexing = "ALTER TABLE `word_image` DISABLE KEYS;";
-			String enableIndexing = "ALTER TABLE `word` ENABLE KEYS;";
-			String enableImageIndexing = "ALTER TABLE `word_image` ENABLE KEYS;";
-
+//			String disableIndexing = "ALTER TABLE `word` DISABLE KEYS;";
+//			String disableImageIndexing = "ALTER TABLE `word_image` DISABLE KEYS;";
+//			String enableIndexing = "ALTER TABLE `word` ENABLE KEYS;";
+//			String enableImageIndexing = "ALTER TABLE `word_image` ENABLE KEYS;";
 			initializePages(initialConnection);
 			if (actualPagesCount > 0) {
 				System.out.println("Indexing in batches of " + BATCH_SIZE + ", total pages remaining are " + actualPagesCount);
 				try {
-					PreparedStatement pst = initialConnection.prepareStatement(disableIndexing);
-					pst.executeUpdate();
-					pst = initialConnection.prepareStatement(disableImageIndexing);
-					pst.executeUpdate();
+//					PreparedStatement pst = initialConnection.prepareStatement(disableIndexing);
+//					pst.executeUpdate();
+//					pst = initialConnection.prepareStatement(disableImageIndexing);
+//					pst.executeUpdate();
 				}
 				catch (Exception e)
 				{
@@ -680,10 +703,9 @@ public class Indexer implements Runnable {
 				pb = new ProgressBar("Indexing", Math.min(actualPagesCount,BATCH_SIZE)); // name, initial max
 				pb.start();
 			}
-
 			connection = initialConnection;
 			List<Thread> threads = new ArrayList<>();
-			for (int i = 0; i < THREADS_COUNT && i < actualPagesCount; i++) {
+			for (int i = 0; i < THREADS_COUNT; i++) {
 //			Connection connection = dbManager.getDBConnection();
 				try {
 					connection.setAutoCommit(false);
@@ -721,22 +743,14 @@ public class Indexer implements Runnable {
 			try {
 				tCommit.join();
 				connection.commit();
-				String sql = "SELECT id,word FROM word";
-				PreparedStatement pst = connection.prepareStatement(sql);
-				ResultSet rs = pst.executeQuery();
-				while (rs.next()) {
-					if (globalWordsIDs.containsKey(rs.getString("word")))
-						if (globalWordsIDs.get(rs.getString("word")) != rs.getInt("id"))
-							throw new Exception("global words are invalid, indexer's data are corrupted");
-				}
 				if (actualPagesCount > 0) {
 					pb.stop();
 					PageRanker.getInstance().timedUpdatePageRanks();
 					try {
-						pst = initialConnection.prepareStatement(enableIndexing);
-						pst.executeUpdate();
-						pst = initialConnection.prepareStatement(enableImageIndexing);
-						pst.executeUpdate();
+//						pst = initialConnection.prepareStatement(enableIndexing);
+//						pst.executeUpdate();
+//						pst = initialConnection.prepareStatement(enableImageIndexing);
+//						pst.executeUpdate();
 						connection.commit();
 					}
 					catch (Exception e)
@@ -757,7 +771,6 @@ public class Indexer implements Runnable {
 	private static void initializePages(Connection connection) {
 
 		try {
-
 			actualPagesCount = 0;
 			pagesState = new HashMap<>();
 			pageURLToID = new HashMap<>();
@@ -766,7 +779,6 @@ public class Indexer implements Runnable {
 			globalWordsIDs = new HashMap<>();
 			globalImageWordsIDs = new HashMap<>();
 			leastID = 2147483647;
-
 			connection.setAutoCommit(false);
 			String sql = "SELECT * from test_search_engine.page";
 			PreparedStatement pst = connection.prepareStatement(sql);
@@ -793,7 +805,6 @@ public class Indexer implements Runnable {
 					pagesState.put(pageID, States.valueOf("CRAWL").ordinal());
 					actualPagesCount++;
 					leastID = Math.min(leastID,pageID);
-
 				}
 
 			}
@@ -803,7 +814,5 @@ public class Indexer implements Runnable {
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
-
 	}
-
 }

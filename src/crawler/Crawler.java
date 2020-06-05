@@ -39,7 +39,7 @@ public class Crawler implements Runnable {
     };
 
     // max number of website to crawl may be more but not less
-    public static final int MAX_WEBSITES = 5000;
+    public static final int MAX_WEBSITES = 5500;
     private static final int EXTRA_MAX_WEBSITES_FACTOR = 5;
     private static final int EXTRA_FOR_IO_EXEPTION = MAX_WEBSITES / EXTRA_MAX_WEBSITES_FACTOR;
     public static final int TOTAL_MAX_WEBSITES_TO_QUEUE = MAX_WEBSITES + EXTRA_FOR_IO_EXEPTION;
