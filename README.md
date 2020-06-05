@@ -58,7 +58,7 @@ Fully working search engine which can search by text, image or voice , it also h
 ``` npm install ```
 3. Run ```ng serve``` for a dev server. Navigate to http://localhost:4200/. The app will automatically reload if you change any of the source files 
 
-:memo: Note: use google chrome because we use browser API in speech recognition.
+:memo: Note: use google chrome because we use its API in speech recognition.
 
 
 ## :chart_with_upwards_trend:Analysis
