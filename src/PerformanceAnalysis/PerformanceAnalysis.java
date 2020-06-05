@@ -172,10 +172,12 @@ public class PerformanceAnalysis implements Runnable {
         // 3. How is the search request latency of your solution affected by the number of web pages crawled?
         if(numOfCrawledPagesList.size() > 0 && latencyList.size() == numOfCrawledPagesList.size()) {
             SwingUtilities.invokeLater(() -> {
-                XYLineChart chart = new XYLineChart("Request latency vs Number Of Crawled Pages", numOfCrawledPagesList, latencyList, "Number Of Crawled Pages", "Latency In ms");
+                XYLineChart chart = new XYLineChart("Request latency vs Number Of Crawled Pages",
+                        numOfCrawledPagesList, latencyList, "Number Of Crawled Pages",
+                        "Latency In ms","latency_vs_crawled_num");
                 chart.setSize(800, 400);
                 chart.setLocationRelativeTo(null);
-                chart.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                chart.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
                 chart.setVisible(true);
             });
         }
@@ -183,10 +185,12 @@ public class PerformanceAnalysis implements Runnable {
         // 4. How is the search request latency of your solution affected by the size of the index table?
         if(sizeOfIndexTableList.size() > 0 && latencyList.size() == sizeOfIndexTableList.size()) {
             SwingUtilities.invokeLater(() -> {
-                XYLineChart chart = new XYLineChart("Request latency vs Size Of Indexed Table", sizeOfIndexTableList, latencyList, "Size Of Indexed Table", "Latency In ms");
+                XYLineChart chart = new XYLineChart("Request latency vs Size Of Indexed Table",
+                        sizeOfIndexTableList, latencyList, "Size Of Indexed Table",
+                        "Latency In ms", "latency_vs_indexed_num");
                 chart.setSize(800, 400);
                 chart.setLocationRelativeTo(null);
-                chart.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                chart.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
                 chart.setVisible(true);
             });
         }
@@ -194,10 +198,12 @@ public class PerformanceAnalysis implements Runnable {
         // 5. How is the search request latency of your solution affected by the ranking process?
         if(keyWordsSizeList.size() > 0 && latencyList.size() == keyWordsSizeList.size()) {
             SwingUtilities.invokeLater(() -> {
-                XYLineChart chart = new XYLineChart("Request latency vs Number Of KeyWords", keyWordsSizeList, latencyList, "Number Of KeyWords", "Latency In ms");
+                XYLineChart chart = new XYLineChart("Request latency vs Number Of KeyWords",
+                        keyWordsSizeList, latencyList, "Number Of KeyWords",
+                        "Latency In ms", "latency_vs_num_keywords");
                 chart.setSize(800, 400);
                 chart.setLocationRelativeTo(null);
-                chart.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                chart.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
                 chart.setVisible(true);
             });
         }
@@ -266,10 +272,12 @@ public class PerformanceAnalysis implements Runnable {
         // 2. How is the latency of your solution affected by the number of simultaneous search requests?
         if(numOfSearchReqList.size() > 0 && newLatencyList.size() == numOfSearchReqList.size()) {
             SwingUtilities.invokeLater(() -> {
-                XYLineChart chart = new XYLineChart("Request latency vs Number Of Simultaneous Search Requests", numOfSearchReqList, newLatencyList, "Number Of Simultaneous Search Requests", "Latency In ms");
+                XYLineChart chart = new XYLineChart("Request latency vs Number Of Simultaneous Search Requests",
+                        numOfSearchReqList, newLatencyList, "Number Of Simultaneous Search Requests",
+                        "Latency In ms", "latency_vs_sim_num_requests");
                 chart.setSize(800, 400);
                 chart.setLocationRelativeTo(null);
-                chart.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                chart.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
                 chart.setVisible(true);
             });
         }
