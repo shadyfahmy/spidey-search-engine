@@ -91,23 +91,23 @@ public static final int MAX_WEBSITES = 500;
 public final static int SECONDS_TO_SLEEP = 5;
 ```
 
-### How many simultaneous search requests can your solution handle?
+### 1. How many simultaneous search requests can your solution handle?
 
 ![Max Number Of Simultaneous Search Requet](readme_images/max_num_sim_search_requests_500.png)
 
-### How is the latency of your solution affected by the number of simultaneous search requests?
+### 2. How is the latency of your solution affected by the number of simultaneous search requests?
 
 ![Latency VS Simultaneous Search Requests](readme_images/latency_vs_sim_num_requests_500.png)
 
-### How is the search request latency of your solution affected by the number of web pages crawled?
+### 3. How is the search request latency of your solution affected by the number of web pages crawled?
 
 ![Latency VS Number Of Web pages Crawled](readme_images/latency_vs_crawled_num_500.png)
 
-### How is the search request latency of your solution affected by the size of the index table?
+### 4. How is the search request latency of your solution affected by the size of the index table?
 
 ![Latency VS Size Of The Index Table](readme_images/latency_vs_indexed_num_500.png)
 
-### How is the search request latency of your solution affected by the ranking process?
+### 5. How is the search request latency of your solution affected by the ranking process?
 
 ![Latency VS Number Of KeyWords Of The Ranking Process](readme_images/latency_vs_num_keywords_500.png)
 
@@ -120,23 +120,23 @@ public static final int MAX_WEBSITES = 5000;
 public final static int SECONDS_TO_SLEEP = 120;
 ```
 
-### How many simultaneous search requests can your solution handle?
+### 1. How many simultaneous search requests can your solution handle?
 
 ![Max Number Of Simultaneous Search Requet](readme_images/max_num_sim_search_requests_5000.png)
 
-### How is the latency of your solution affected by the number of simultaneous search requests?
+### 2. How is the latency of your solution affected by the number of simultaneous search requests?
 
 ![Latency VS Simultaneous Search Requests](readme_images/latency_vs_sim_num_requests_5000.png)
 
-### How is the search request latency of your solution affected by the number of web pages crawled?
+### 3. How is the search request latency of your solution affected by the number of web pages crawled?
 
 ![Latency VS Number Of Web pages Crawled](readme_images/latency_vs_crawled_num_5000.png)
 
-### How is the search request latency of your solution affected by the size of the index table?
+### 4. How is the search request latency of your solution affected by the size of the index table?
 
 ![Latency VS Size Of The Index Table](readme_images/latency_vs_indexed_num_5000.png)
 
-### How is the search request latency of your solution affected by the ranking process?
+### 5. How is the search request latency of your solution affected by the ranking process?
 
 ![Latency VS Number Of KeyWords Of The Ranking Process](readme_images/latency_vs_num_keywords_5000.png)
 
