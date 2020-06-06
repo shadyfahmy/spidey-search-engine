@@ -7,7 +7,7 @@
   <h3 align="center">:spider: Spidey :spider_web:</h3>
 
   <p align="center">
-    Fully working search engine which can search by text, image or voice , it also has its own crawler, indexer, ranker, query engine and UI
+    Fully working search engine which can search by text or voice for webpages or images, it also has its own crawler, indexer, ranker, query engine and UI
   </p>
 </p>
 
