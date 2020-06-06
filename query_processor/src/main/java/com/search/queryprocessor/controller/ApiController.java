@@ -21,7 +21,6 @@ import java.util.List;
 public class ApiController {
 
     private final QueryRepository repository;
-    Stemmer stemmer = new Stemmer();
     QueryResultsFetcher fetcher = new QueryResultsFetcher();
 
 
@@ -83,6 +82,7 @@ public class ApiController {
                                                      @RequestParam(name = "user") int user ) {
 
         text = text.replace("\"", " \" ");
+        Stemmer stemmer = new Stemmer();
 
         String words = "";
         List<String> impWords = new ArrayList<String>();
@@ -118,6 +118,8 @@ public class ApiController {
                          @RequestParam(name = "user") int user ) {
 
         List<String> impWords = new ArrayList<String>();
+        Stemmer stemmer = new Stemmer();
+
         impWords = stemmer.getStemmedWords(text);
         int offset = (page - 1)*20;
         return fetcher.getImageSearchResults(impWords, offset, 20);
