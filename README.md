@@ -1,7 +1,8 @@
 <br />
+<br />
 <p align="center">
   <a href="https://github.com/shadyfahmy/SearchEngine">
-    <img src="readme_images/spidey.png" alt="Logo" width="80" height="80">
+    <img src="readme_images/spidey.png" alt="Logo" width="125" height="125">
   </a>
   
   <h3 align="center">:spider: Spidey :spider_web:</h3>
