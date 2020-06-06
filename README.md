@@ -145,7 +145,11 @@ public final static int SECONDS_TO_SLEEP = 120;
 
 ## Search By Text
 
-![Search By Text Test GIF](readme_images/search_text_test.gif)
+![Search By Text Test GIF](readme_images/search_text_test_1.gif)
+
+## Navigate Result Pages
+
+![Search By Text Test GIF](readme_images/pages_test.gif)
 
 ## Search By Voice
 
