@@ -1,6 +1,17 @@
-</div>
+<br />
+<p align="center">
+  <a href="https://github.com/shadyfahmy/SearchEngine">
+    <img src="readme_images/spidey.png" alt="Logo" width="80" height="80">
+  </a>
+  
+  <h3 align="center">:spider: Spidey :spider_web:</h3>
 
-<h3 align="center">:spider: Spidey :spider_web:</h3>
+  <p align="center">
+    Fully working search engine which can search by text, image or voice , it also has its own crawler, indexer, ranker, query engine and UI
+  </p>
+</p>
+
+</div>
 
 <div align="center">
 
@@ -12,13 +23,7 @@
 
 </div>
 
-# :spider: Spidey :spider_web:
-
-Fully working search engine which can search by text, image or voice , it also has its own crawler, indexer, ranker, query engine and UI.
-
----
-
-## :construction_worker: Dependencies
+# :construction_worker: Dependencies
 
 - [java](https://www.java.com)
 - [javac](https://docs.oracle.com/javase/8/docs/technotes/tools/windows/javac.html)
@@ -27,7 +32,7 @@ Fully working search engine which can search by text, image or voice , it also h
 - [npm](https://www.npmjs.com)
 - [angular-cli](https://angular.io/cli)
 
-## :package: [Liberaries](/lib)
+# :package: [Liberaries](/lib)
 
 - jsoup
 - jfreechart
@@ -35,7 +40,7 @@ Fully working search engine which can search by text, image or voice , it also h
 - mysql-connector-java
 - progressbar
 
-## :pencil: Modules
+# :pencil: Modules
 
 - [Crawler](/src/crawler)
 - [Indexer](/src/indexer)
@@ -47,7 +52,7 @@ Fully working search engine which can search by text, image or voice , it also h
 - [DataBase Manager](/src/k2_algorithmic_warmup/database_manager)
 - [UI](/front_end)
 
-## :rocket: Running Main Modules
+# :rocket: Running Main Modules
 
 1. Clone using vesion control using any IDE ,e.g: [IntelliJ IDEA](https://www.jetbrains.com/help/idea/set-up-a-git-repository.html)
 2. Install mysql server
@@ -64,7 +69,7 @@ Fully working search engine which can search by text, image or voice , it also h
 9. Run [Query Processor](/query_processor/src/main/java/com/search/queryprocessor/QueryprocessorApplication.java) (wait until it lauches to move to the next step)
 10. Run [Performance Analysis](/src/performance_analysis/PerformanceAnalysis.java)
 
-## :art: Running Front-End
+# :art: Running Front-End
 
 1. Run [Query Processor](/query_processor/src/main/java/com/search/queryprocessor/QueryprocessorApplication.java) (wait until it lauches to move to the next step)
 2. Open front end folder
@@ -75,7 +80,9 @@ Fully working search engine which can search by text, image or voice , it also h
 
 :memo: Note: use google chrome because we use its API in speech recognition.
 
-## :chart_with_upwards_trend: Analysis
+# :chart_with_upwards_trend: Analysis
+
+## Analysis with 500 pages
 
 This analysis has been made with this parameters using [Performance Analysis](/src/performance_analysis/PerformanceAnalysis.java) module
 
@@ -86,25 +93,25 @@ public final static int SECONDS_TO_SLEEP = 5;
 
 ### How many simultaneous search requests can your solution handle?
 
-![Max Number Of Simultaneous Search Requet](/readme_images/max_num_sim_search_requests_500.png)
+![Max Number Of Simultaneous Search Requet](readme_images/max_num_sim_search_requests_500.png)
 
 ### How is the latency of your solution affected by the number of simultaneous search requests?
 
-![Latency VS Simultaneous Search Requests](/readme_images/latency_vs_sim_num_requests_500.png)
+![Latency VS Simultaneous Search Requests](readme_images/latency_vs_sim_num_requests_500.png)
 
 ### How is the search request latency of your solution affected by the number of web pages crawled?
 
-![Latency VS Number Of Web pages Crawled](/readme_images/latency_vs_crawled_num_500.png)
+![Latency VS Number Of Web pages Crawled](readme_images/latency_vs_crawled_num_500.png)
 
 ### How is the search request latency of your solution affected by the size of the index table?
 
-![Latency VS Size Of The Index Table](/readme_images/latency_vs_indexed_num_500.png)
+![Latency VS Size Of The Index Table](readme_images/latency_vs_indexed_num_500.png)
 
 ### How is the search request latency of your solution affected by the ranking process?
 
-![Latency VS Number Of KeyWords Of The Ranking Process](/readme_images/latency_vs_num_keywords_500.png)
+![Latency VS Number Of KeyWords Of The Ranking Process](readme_images/latency_vs_num_keywords_500.png)
 
----
+## Analysis with 5000 pages
 
 This analysis has been made with this parameters using [Performance Analysis](/src/performance_analysis/PerformanceAnalysis.java) module
 
@@ -115,25 +122,25 @@ public final static int SECONDS_TO_SLEEP = 120;
 
 ### How many simultaneous search requests can your solution handle?
 
-![Max Number Of Simultaneous Search Requet](/readme_images/max_num_sim_search_requests_5000.png)
+![Max Number Of Simultaneous Search Requet](readme_images/max_num_sim_search_requests_5000.png)
 
 ### How is the latency of your solution affected by the number of simultaneous search requests?
 
-![Latency VS Simultaneous Search Requests](/readme_images/latency_vs_sim_num_requests_5000.png)
+![Latency VS Simultaneous Search Requests](readme_images/latency_vs_sim_num_requests_5000.png)
 
 ### How is the search request latency of your solution affected by the number of web pages crawled?
 
-![Latency VS Number Of Web pages Crawled](/readme_images/latency_vs_crawled_num_5000.png)
+![Latency VS Number Of Web pages Crawled](readme_images/latency_vs_crawled_num_5000.png)
 
 ### How is the search request latency of your solution affected by the size of the index table?
 
-![Latency VS Size Of The Index Table](/readme_images/latency_vs_indexed_num_5000.png)
+![Latency VS Size Of The Index Table](readme_images/latency_vs_indexed_num_5000.png)
 
 ### How is the search request latency of your solution affected by the ranking process?
 
-![Latency VS Number Of KeyWords Of The Ranking Process](/readme_images/latency_vs_num_keywords_5000.png)
+![Latency VS Number Of KeyWords Of The Ranking Process](readme_images/latency_vs_num_keywords_5000.png)
 
-## Screenshots
+# Screenshots
 
 # :fire: Developers
 
