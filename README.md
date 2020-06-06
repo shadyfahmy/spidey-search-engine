@@ -12,13 +12,13 @@
 
 </div>
 
-# :spider:Spidey:spider_web:
+# :spider: Spidey :spider_web:
 
 Fully working search engine which can search by text, image or voice , it also has its own crawler, indexer, ranker, query engine and UI.
 
 ---
 
-## :construction_worker:Dependencies
+## :construction_worker: Dependencies
 
 - [java](https://www.java.com)
 - [javac](https://docs.oracle.com/javase/8/docs/technotes/tools/windows/javac.html)
@@ -27,7 +27,7 @@ Fully working search engine which can search by text, image or voice , it also h
 - [npm](https://www.npmjs.com)
 - [angular-cli](https://angular.io/cli)
 
-## :package:[Liberaries](/lib)
+## :package: [Liberaries](/lib)
 
 - jsoup
 - jfreechart
@@ -35,7 +35,7 @@ Fully working search engine which can search by text, image or voice , it also h
 - mysql-connector-java
 - progressbar
 
-## :pencil:Modules
+## :pencil: Modules
 
 - [Crawler](/src/crawler)
 - [Indexer](/src/indexer)
@@ -47,7 +47,7 @@ Fully working search engine which can search by text, image or voice , it also h
 - [DataBase Manager](/src/k2_algorithmic_warmup/database_manager)
 - [UI](/front_end)
 
-## :running_man:Run Main Modules:rocket:
+## :rocket: Running Main Modules
 
 1. Clone using vesion control using any IDE ,e.g: [IntelliJ IDEA](https://www.jetbrains.com/help/idea/set-up-a-git-repository.html)
 2. Install mysql server
@@ -64,7 +64,7 @@ Fully working search engine which can search by text, image or voice , it also h
 9. Run [Query Processor](/query_processor/src/main/java/com/search/queryprocessor/QueryprocessorApplication.java) (wait until it lauches to move to the next step)
 10. Run [Performance Analysis](/src/performance_analysis/PerformanceAnalysis.java)
 
-## :running_man:RunFront-End:art:
+## :art: Running Front-End
 
 1. Run [Query Processor](/query_processor/src/main/java/com/search/queryprocessor/QueryprocessorApplication.java) (wait until it lauches to move to the next step)
 2. Open front end folder
@@ -135,7 +135,7 @@ public final static int SECONDS_TO_SLEEP = 120;
 
 ## Screenshots
 
-# Developers
+# :fire: Developers
 
 <center>
   
