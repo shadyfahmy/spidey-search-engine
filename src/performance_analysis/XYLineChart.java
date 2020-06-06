@@ -20,7 +20,7 @@ import java.io.OutputStream;
 import java.util.List;
 
 public class XYLineChart extends JFrame {
-    public XYLineChart(String title, List<Integer> xList, List<Double> yList, String xLabel, String yLabel, String saveFileName) {
+    public XYLineChart(String title, List<Integer> xList, List<Double> yList, String xLabel, String yLabel, String saveFilePath, String saveFileName) {
         super(title);
         XYDataset dataset = create_dataset("", xList, yList);
         JFreeChart chart = ChartFactory.createXYLineChart(
@@ -40,10 +40,10 @@ public class XYLineChart extends JFrame {
         ChartPanel panel = new ChartPanel(chart);
         setContentPane(panel);
         try {
-            OutputStream out = new FileOutputStream("./analysis/"  + saveFileName + ".png");
-            ChartUtils.writeChartAsPNG(out, chart, 800, 400);
+            OutputStream out = new FileOutputStream(saveFilePath  + saveFileName + ".png");
+            ChartUtils.writeChartAsPNG(out, chart, PerformanceAnalysis.CHART_WIDTH, PerformanceAnalysis.CHART_HEIGHT);
         } catch (IOException ex) {
-            System.out.println("Couldn't save graph \"./analysis/"  + saveFileName + ".png\"");
+            System.out.println("Couldn't save graph to "+ saveFilePath + saveFileName + ".png\"");
         }
 
     }

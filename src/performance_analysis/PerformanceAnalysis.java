@@ -19,14 +19,17 @@ import javax.swing.WindowConstants;
 public class PerformanceAnalysis implements Runnable {
 
     public static final DatabaseManager dbManager = new DatabaseManager();  // Database manager instance
-    public final static int START_NUM_OF_THREADS = 50;                     // could be any number
+    public final static int START_NUM_OF_THREADS = 50;                      // could be any number
     public final static int NUM_THREAD_STEP = 10;                           // could be any number
-    public final static int SECONDS_BEFORE_LOAD_TEST = 1;
-    public final static int SECONDS_TO_SLEEP = 120;
+    public final static int SECONDS_BEFORE_LOAD_TEST = 0;                   // Delay before load test again
+    public final static int SECONDS_TO_SLEEP = 120;                         // Delay before collecting data again
     public static final int CONNECT_TIME_OUT = 5000;
     public static final int READ_TIME_OUT = 5000;
+    public static final int CHART_WIDTH = 800;
+    public static final int CHART_HEIGHT = 400;
     public static int numOfThreads = START_NUM_OF_THREADS;
     public static int maxNumHandeledRequests = 0;
+    private static final String SAVE_CHARTS_PATH = "./analysis/";
     private static final String baseUrl = "http://localhost:8080/api/v1/get-results?";
     private static final String searchText = "Sorting algorithms";
     private static final int pageNum = 1;
@@ -174,10 +177,11 @@ public class PerformanceAnalysis implements Runnable {
             SwingUtilities.invokeLater(() -> {
                 XYLineChart chart = new XYLineChart("Request latency vs Number Of Crawled Pages",
                         numOfCrawledPagesList, latencyList, "Number Of Crawled Pages",
-                        "Latency In ms","latency_vs_crawled_num");
-                chart.setSize(800, 400);
+                        "Latency In ms",PerformanceAnalysis.SAVE_CHARTS_PATH,
+                        "latency_vs_crawled_num");
+                chart.setSize(PerformanceAnalysis.CHART_WIDTH, PerformanceAnalysis.CHART_HEIGHT);
                 chart.setLocationRelativeTo(null);
-                chart.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+                chart.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
                 chart.setVisible(true);
             });
         }
@@ -187,10 +191,11 @@ public class PerformanceAnalysis implements Runnable {
             SwingUtilities.invokeLater(() -> {
                 XYLineChart chart = new XYLineChart("Request latency vs Size Of Indexed Table",
                         sizeOfIndexTableList, latencyList, "Size Of Indexed Table",
-                        "Latency In ms", "latency_vs_indexed_num");
-                chart.setSize(800, 400);
+                        "Latency In ms", PerformanceAnalysis.SAVE_CHARTS_PATH,
+                        "latency_vs_indexed_num");
+                chart.setSize(PerformanceAnalysis.CHART_WIDTH, PerformanceAnalysis.CHART_HEIGHT);
                 chart.setLocationRelativeTo(null);
-                chart.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+                chart.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
                 chart.setVisible(true);
             });
         }
@@ -200,10 +205,11 @@ public class PerformanceAnalysis implements Runnable {
             SwingUtilities.invokeLater(() -> {
                 XYLineChart chart = new XYLineChart("Request latency vs Number Of KeyWords",
                         keyWordsSizeList, latencyList, "Number Of KeyWords",
-                        "Latency In ms", "latency_vs_num_keywords");
-                chart.setSize(800, 400);
+                        "Latency In ms", PerformanceAnalysis.SAVE_CHARTS_PATH,
+                        "latency_vs_num_keywords");
+                chart.setSize(PerformanceAnalysis.CHART_WIDTH, PerformanceAnalysis.CHART_HEIGHT);
                 chart.setLocationRelativeTo(null);
-                chart.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+                chart.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
                 chart.setVisible(true);
             });
         }
@@ -274,10 +280,11 @@ public class PerformanceAnalysis implements Runnable {
             SwingUtilities.invokeLater(() -> {
                 XYLineChart chart = new XYLineChart("Request latency vs Number Of Simultaneous Search Requests",
                         numOfSearchReqList, newLatencyList, "Number Of Simultaneous Search Requests",
-                        "Latency In ms", "latency_vs_sim_num_requests");
-                chart.setSize(800, 400);
+                        "Latency In ms", PerformanceAnalysis.SAVE_CHARTS_PATH,
+                        "latency_vs_sim_num_requests");
+                chart.setSize(PerformanceAnalysis.CHART_WIDTH, PerformanceAnalysis.CHART_HEIGHT);
                 chart.setLocationRelativeTo(null);
-                chart.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+                chart.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
                 chart.setVisible(true);
             });
         }
