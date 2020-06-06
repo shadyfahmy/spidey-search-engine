@@ -706,13 +706,13 @@ public class Indexer implements Runnable {
 				pb = new ProgressBar("Indexing", Math.min(actualPagesCount,BATCH_SIZE)); // name, initial max
 				pb.start();
 			}
-
 			connection = initialConnection;
 			List<Thread> threads = new ArrayList<>();
 			for (int i = 0; i < THREADS_COUNT; i++) {
 			Connection connection = dbManager.getDBConnection();
 				try {
 					connection.setAutoCommit(false);
+					connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
