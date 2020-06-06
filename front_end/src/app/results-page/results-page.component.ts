@@ -99,10 +99,13 @@ export class ResultsPageComponent implements OnInit {
               this.next = false;
             else
               this.next = true
+            this.loading = false
           }
-          console.log(this.images)
-          this.next = false;
-          this.loading = false
+          else{
+            console.log(this.images)
+            this.next = false;
+            this.loading = false
+          }
         }      
         else {
           this.next = false;
@@ -122,10 +125,13 @@ export class ResultsPageComponent implements OnInit {
               this.next = false;
             else
               this.next = true
+            this.loading = false
           }
-          console.log(this.results)
-          this.next = false;
-          this.loading = false
+          else{
+            console.log(this.results)
+            this.next = false;
+            this.loading = false
+          }
         }
         else {
           this.next = false;
@@ -208,10 +214,11 @@ export class ResultsPageComponent implements OnInit {
     this.page = this.page + 1;
     if(this.imageSearch) {
       this.router.navigate(['search', this.value, "true", this.page])
+      this.ngOnInit()
     }
     else{
       this.router.navigate(['search', this.value, "false", this.page])
-
+      this.ngOnInit()
     }
   }
   
@@ -220,10 +227,11 @@ export class ResultsPageComponent implements OnInit {
     this.page = this.page - 1;
     if(this.imageSearch) {
       this.router.navigate(['search', this.value, "true", this.page])
+      this.ngOnInit()
     }
     else{
       this.router.navigate(['search', this.value, "false", this.page])
-
+      this.ngOnInit()
     }
   }
 
