@@ -36,7 +36,7 @@ public class Indexer implements Runnable {
 	private static boolean commitThread = true, imageThread = true;
 	private static HashMap<String, Integer> globalWordsIDs ;
 	private static HashMap<String, Integer> globalImageWordsIDs;
-
+	private static List<Connection> connections;
 	public enum States {SKIP, CRAWL, RECRAWL};
 	private static int countIndexed;
 	private static Connection connection;
@@ -288,6 +288,7 @@ public class Indexer implements Runnable {
 		} else if (threadNumber > THREADS_COUNT) {
 			ImageThread();
 		} else {
+			Connection connection = connections.get(threadNumber);
 			for (int p = threadNumber + leastID; p <= pagesState.size()+1; p += THREADS_COUNT) {
 				int pageState;
 				int thisPageID = p;
@@ -321,12 +322,13 @@ public class Indexer implements Runnable {
 							pst.setString(1, formatter.format(now));
 							pst.setInt(2, thisPageID);
 							pst.executeUpdate();
+							connection.commit();
 							synchronized (commitOrder) {
 								{
 									countIndexed++;
-									if (countIndexed % 10 == 9) {
-										commitOrder.add(true);
-									}
+//									if (countIndexed % 10 == 9) {
+//										commitOrder.add(true);
+//									}
 								}
 							}
 						if (countIndexed > BATCH_SIZE - THREADS_COUNT)
@@ -523,7 +525,7 @@ public class Indexer implements Runnable {
 							pst.executeUpdate();
 
 						}
-
+						connection.commit();
 						//Populate page_connections table
 						sql = "insert ignore into page_connections (from_page_id, to_page_id) values (?,?)";
 						pst = connection.prepareStatement(sql);
@@ -533,7 +535,7 @@ public class Indexer implements Runnable {
 							pst.addBatch();
 						}
 						pst.executeBatch();
-//						connection.commit();
+						connection.commit();
 //					}
 //					synchronized (dbManager) {
 
@@ -606,6 +608,7 @@ public class Indexer implements Runnable {
 									} else
 										throw new Exception("words queue failed");
 								}
+								connection.commit();
 							}
 						}
 
@@ -629,7 +632,6 @@ public class Indexer implements Runnable {
 							pst.setInt(3, entry.getValue());
 							pst.setBoolean(4, importantWords.containsKey(entry.getKey()));
 							pst.addBatch();
-							if (count % 50 == 49) pst.executeBatch();
 							ArrayList<Integer> indices = wordsPositions.get(entry.getKey());
 
 
@@ -640,25 +642,26 @@ public class Indexer implements Runnable {
 								pst2.addBatch();
 
 							}
-							if (count % 50 == 49) pst2.executeBatch();
 
 						}
 
 						pst.executeBatch();
 						pst2.executeBatch();
+						connection.commit();
 
 						sql = "UPDATE word INNER JOIN word_index ON word.id = word_index.word_id " +
 								"SET word.pages_count = word.pages_count + 1 WHERE word_index.page_id  = ?;";
 						pst = connection.prepareStatement(sql);
 						pst.setInt(1, thisPageID);
 						pst.executeUpdate();
+						connection.commit();
 
 						synchronized (commitOrder) {
 							{
 								countIndexed++;
-								if (countIndexed % 10 == 9) {
-									commitOrder.add(true);
-								}
+//								if (countIndexed % 10 == 9) {
+//									commitOrder.add(true);
+//								}
 							}
 						}
 
@@ -703,10 +706,11 @@ public class Indexer implements Runnable {
 				pb = new ProgressBar("Indexing", Math.min(actualPagesCount,BATCH_SIZE)); // name, initial max
 				pb.start();
 			}
+
 			connection = initialConnection;
 			List<Thread> threads = new ArrayList<>();
 			for (int i = 0; i < THREADS_COUNT; i++) {
-//			Connection connection = dbManager.getDBConnection();
+			Connection connection = dbManager.getDBConnection();
 				try {
 					connection.setAutoCommit(false);
 				} catch (SQLException e) {
@@ -715,6 +719,7 @@ public class Indexer implements Runnable {
 				Thread t = new Thread(new Indexer(dbManager));
 				t.setName(Integer.toString(i));
 				threads.add(t);
+				connections.add(connection);
 				t.start();
 			}
 			Thread tCommit = new Thread(new Indexer(dbManager));
@@ -779,6 +784,7 @@ public class Indexer implements Runnable {
 			globalWordsIDs = new HashMap<>();
 			globalImageWordsIDs = new HashMap<>();
 			leastID = 2147483647;
+			connections = new ArrayList<>();
 			connection.setAutoCommit(false);
 			String sql = "SELECT * from test_search_engine.page";
 			PreparedStatement pst = connection.prepareStatement(sql);
