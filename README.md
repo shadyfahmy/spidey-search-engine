@@ -141,9 +141,25 @@ public final static int SECONDS_TO_SLEEP = 120;
 
 ![Latency VS Number Of KeyWords Of The Ranking Process](readme_images/latency_vs_num_keywords_5000.png)
 
-# Screenshots
+# :fire: Spidey On The Action
 
-# :fire: Developers
+## Search By Text
+
+![Search By Text Test GIF](readme_images/search_text_test.gif)
+
+## Search By Voice
+
+![Search By Voice Test GIF](readme_images/voice_test.gif)
+
+## Search For Images
+
+![Search For Images Test GIF](readme_images/search_image_test.gif)
+
+## Night Mode
+
+![Night Mode Test GIF](readme_images/nightmode_test.gif)
+
+# :copyright: Developers
 
 <center>
   

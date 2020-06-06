@@ -1,13 +1,14 @@
 package com.search.queryprocessor.utils;
 
 
+import org.tartarus.snowball.ext.EnglishStemmer;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import org.tartarus.snowball.ext.EnglishStemmer;
 
 public class Stemmer {
 
