@@ -172,6 +172,6 @@ public final static int SECONDS_TO_SLEEP = 120;
 | Abdulrahman Khalid Hassan           | abdulrahman.elshafei98@gmail.com |
 | Shady Fahmy Abd Elhafez             |       Shadyfahmy67@gmail.com     |
 | AbdElRahman Muhammad Ahmad ElGamil  |     abdurrumanmohamed@gmail.com  |
-| Yosry Ahmed                         |         yosrym93@gmail.com       |
+| Yosry Mohammad Yosry                |         yosrym93@gmail.com       |
 
 </center>
