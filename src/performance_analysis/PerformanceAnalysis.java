@@ -22,7 +22,7 @@ public class PerformanceAnalysis implements Runnable {
     public final static int START_NUM_OF_THREADS = 50;                     // could be any number
     public final static int NUM_THREAD_STEP = 10;                           // could be any number
     public final static int SECONDS_BEFORE_LOAD_TEST = 1;
-    public final static int SECONDS_TO_SLEEP = 60;
+    public final static int SECONDS_TO_SLEEP = 120;
     public static final int CONNECT_TIME_OUT = 5000;
     public static final int READ_TIME_OUT = 5000;
     public static int numOfThreads = START_NUM_OF_THREADS;
