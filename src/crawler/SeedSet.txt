@@ -4,7 +4,6 @@ http://www.geeksforgeeks.org
 http://stackoverflow.com/questions
 http://www.atlasobscura.com
 http://en.wikipedia.org/wiki/Lists_of_countries_and_territories
-http://www.dailymail.co.uk
 http://www.nytimes.com
 http://www.imdb.com
 http://www.rottentomatoes.com
