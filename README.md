@@ -50,7 +50,7 @@
   - [Query Results Fetcher](/src/ranker/QueryResultsFetcher.java)
 - [Query Engine](/query_processor)
 - [Performace Analysis](/src/performance_analysis)
-- [DataBase Manager](/src/k2_algorithmic_warmup/database_manager)
+- [DataBase Manager](/src/database_manager)
 - [UI](/front_end)
 
 # :rocket: Running Main Modules
